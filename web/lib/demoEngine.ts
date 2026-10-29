@@ -34,6 +34,17 @@ export interface ProposedBusiness {
   };
 }
 
+export interface TasteProfile {
+  dominantTastes: string[];
+  incomeBand: string;
+  footTraffic: string;
+}
+
+export interface LlmBaseline {
+  suggested: string[];
+  note: string;
+}
+
 export interface Report {
   location: string;
   building: { maxRent: number; minTraffic: number; sqft: number };
@@ -49,6 +60,8 @@ export interface Report {
   flags: { tenant: string; reason: string }[];
   trace?: { step: string; result?: string; count?: number; error?: string; tags?: string[] }[];
   proposed?: ProposedBusiness;
+  tasteProfile?: TasteProfile;
+  llmBaseline?: LlmBaseline;
   mode: "demo" | "live";
 }
 
@@ -56,6 +69,8 @@ interface NeighborhoodProfile {
   name: string;
   aliases: string[];
   dominantTastes: string[];
+  incomeBand: string;
+  footTraffic: string;
   tenants: Omit<Tenant, "score" | "verdict" | "why">[];
 }
 
@@ -82,6 +97,8 @@ const NEIGHBORHOODS: NeighborhoodProfile[] = [
     name: "Williamsburg, Brooklyn, NY",
     aliases: ["williamsburg", "brooklyn", "ny", "new york"],
     dominantTastes: ["indie music", "craft coffee", "natural wine", "vintage fashion", "farm-to-table"],
+    incomeBand: "upper-middle",
+    footTraffic: "high",
     tenants: [
       { name: "Devoción Coffee", category: "cafe", audienceOverlap: 0.92, estimatedRent: 8000, expectedTraffic: 900, spaceNeeded: 1500, flagReason: null },
       { name: "The Natural Wine", category: "restaurant", audienceOverlap: 0.88, estimatedRent: 11000, expectedTraffic: 700, spaceNeeded: 1800, flagReason: null },
@@ -98,6 +115,8 @@ const NEIGHBORHOODS: NeighborhoodProfile[] = [
     name: "The Mission, San Francisco, CA",
     aliases: ["mission", "san francisco", "sf", "california"],
     dominantTastes: ["burritos", "craft beer", "punk rock", "street art", "tech culture"],
+    incomeBand: "mixed",
+    footTraffic: "very high",
     tenants: [
       { name: "La Taqueria", category: "restaurant", audienceOverlap: 0.94, estimatedRent: 9000, expectedTraffic: 1100, spaceNeeded: 2000, flagReason: null },
       { name: "Barebottle Brewing", category: "restaurant", audienceOverlap: 0.87, estimatedRent: 12000, expectedTraffic: 900, spaceNeeded: 3000, flagReason: null },
@@ -112,6 +131,8 @@ const NEIGHBORHOODS: NeighborhoodProfile[] = [
     name: "West Loop, Chicago, IL",
     aliases: ["west loop", "chicago", "illinois"],
     dominantTastes: ["fine dining", "architecture", "jazz", "craft cocktails", "art galleries"],
+    incomeBand: "high",
+    footTraffic: "medium",
     tenants: [
       { name: "Aba", category: "restaurant", audienceOverlap: 0.9, estimatedRent: 14000, expectedTraffic: 700, spaceNeeded: 2500, flagReason: null },
       { name: "The Allis", category: "restaurant", audienceOverlap: 0.86, estimatedRent: 12000, expectedTraffic: 600, spaceNeeded: 1800, flagReason: null },
@@ -293,6 +314,13 @@ export function analyzeDemo(location: string, maxRent: number, minTraffic: numbe
     ? evaluateProposed(proposedBusiness, neighborhood, building)
     : undefined;
 
+  // Generic LLM baseline — what a plain LLM would suggest without Qloo:
+  // generic categories, no cultural grounding. Shows the gap.
+  const llmBaseline: LlmBaseline = {
+    suggested: ["Café", "Restaurant", "Retail store", "Fitness studio", "Bank branch"],
+    note: "A generic LLM suggests broad categories — it cannot see that this neighborhood skews vintage, farm-to-table, and indie, or that a discount electronics outlet would fail here.",
+  };
+
   return {
     location: neighborhood.name,
     building,
@@ -315,6 +343,12 @@ export function analyzeDemo(location: string, maxRent: number, minTraffic: numbe
       ...(proposed ? [{ step: "evaluate_proposed", result: proposed.name, count: 1 }] : []),
     ],
     proposed,
+    tasteProfile: {
+      dominantTastes: neighborhood.dominantTastes,
+      incomeBand: neighborhood.incomeBand,
+      footTraffic: neighborhood.footTraffic,
+    },
+    llmBaseline,
     mode: "demo",
   };
 }

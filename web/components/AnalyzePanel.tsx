@@ -243,6 +243,60 @@ export default function AnalyzePanel() {
             <p className="text-sm leading-relaxed text-ink">{report.summary.narrative}</p>
           </div>
 
+          {/* taste profile — Qloo's visible signal */}
+          {report.tasteProfile && (
+            <div className="mt-4 rounded-card border border-line bg-surface p-5">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+                locality taste profile
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {report.tasteProfile.dominantTastes.map((taste) => (
+                  <span key={taste} className="rounded-full border border-forest/20 bg-forest/5 px-3 py-1 text-xs text-forest">
+                    {taste}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-6 font-mono text-[11px] text-ink-soft">
+                <span>income · {report.tasteProfile.incomeBand}</span>
+                <span>foot traffic · {report.tasteProfile.footTraffic}</span>
+              </div>
+            </div>
+          )}
+
+          {/* LLM vs Perfect Mix — the "why Qloo" proof */}
+          {report.llmBaseline && (
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-card border border-line bg-surface p-5">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+                  generic LLM suggestion
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {report.llmBaseline.suggested.map((s) => (
+                    <span key={s} className="rounded-full border border-line px-3 py-1 text-xs text-ink-soft">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-ink-faint">{report.llmBaseline.note}</p>
+              </div>
+              <div className="rounded-card border border-forest/25 bg-forest/5 p-5">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-forest">
+                  perfect mix
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {report.summary.recommendedMix.map((s) => (
+                    <span key={s} className="rounded-full bg-forest px-3 py-1 text-xs text-white">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-ink-soft">
+                  Grounded in this neighborhood's actual cultural signals — with scores, reasons, and risk flags.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* proposed business */}
           {report.proposed && (
             <div className={`mt-4 rounded-card border p-5 ${
