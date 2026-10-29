@@ -189,13 +189,30 @@ const TENANT_TEMPLATES = [
   { category: "service", name: "Professional Services Office", spaceNeeded: 2500 },
 ];
 
-function generateCandidates(profile, building) {
-  return TENANT_TEMPLATES.map((tpl) => ({
-    ...tpl,
-    estimatedRent: Math.round(building.maxRent * (0.6 + Math.random() * 0.5)),
-    expectedTraffic: Math.round(300 + Math.random() * 900),
-    flagReason: null,
-  }));
+function generateCandidates(tasteTags, building) {
+  // Score each template category by how well it matches the taste tags,
+  // then weight candidate generation toward the categories that fit.
+  const categoryAffinity = {};
+  for (const cat of Object.keys(CATEGORY_KEYWORDS)) {
+    const keywords = CATEGORY_KEYWORDS[cat];
+    let hits = 0;
+    for (const { tag } of tasteTags) {
+      const t = String(tag).toLowerCase();
+      if (keywords.some((k) => t.includes(k))) hits += 1;
+    }
+    categoryAffinity[cat] = tasteTags.length > 0 ? hits / tasteTags.length : 0.5;
+  }
+
+  return TENANT_TEMPLATES.map((tpl) => {
+    const affinity = categoryAffinity[tpl.category] ?? 0.5;
+    return {
+      ...tpl,
+      estimatedRent: Math.round(building.maxRent * (0.6 + Math.random() * 0.5) * (1.2 - affinity * 0.4)),
+      expectedTraffic: Math.round((300 + Math.random() * 900) * (0.8 + affinity * 0.6)),
+      flagReason: null,
+      affinity,
+    };
+  });
 }
 
 // ---------------------------------------------------------------
@@ -296,7 +313,7 @@ const server = http.createServer((req, res) => {
         trace.push({ step: "taste_tags", count: tasteTags.length, tags: tasteTags.slice(0, 5).map((t) => t.tag) });
 
         // step 3: generate candidates
-        const tenants = generateCandidates({}, building);
+        const tenants = generateCandidates(tasteTags, building);
         trace.push({ step: "generate_candidates", count: tenants.length });
 
         // step 4: score
