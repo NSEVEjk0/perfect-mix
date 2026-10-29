@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { analyzeDemo, type Report } from "@/lib/demoEngine";
 
 const LIVE_URL = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://127.0.0.1:4180";
@@ -42,8 +42,18 @@ export default function AnalyzePanel() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"demo" | "live">("demo");
-  const [showTrace, setShowTrace] = useState(false);
+  const [showTrace, setShowTrace] = useState(true);
   const [showProposedDetails, setShowProposedDetails] = useState(false);
+  const [expandedTenants, setExpandedTenants] = useState<Set<string>>(new Set());
+
+  const toggleTenant = (name: string) => {
+    setExpandedTenants((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   const run = async () => {
     setLoading(true);
@@ -237,6 +247,36 @@ export default function AnalyzePanel() {
           <div className="mt-4 rounded-card border border-good/20 bg-good-soft p-5">
             <p className="text-sm leading-relaxed text-ink">{report.summary.narrative}</p>
           </div>
+
+          {/* how perfect mix decided */}
+          <div className="mt-4 rounded-card border border-line bg-surface p-5">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+              how perfect mix decided
+            </div>
+            <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+              Perfect Mix resolved {report.location}, built a cultural taste profile from Qloo's
+              signals, and scored {report.summary.totalTenants} candidate tenants against it.
+              {report.summary.strongFits > 0 && ` ${report.summary.strongFits} scored as strong fits.`}
+              {report.summary.mismatches > 0 && ` ${report.summary.mismatches} were flagged as mismatches.`}
+              {" "}The recommended mix prioritizes the highest-scoring tenants with the strongest audience overlap.
+            </p>
+          </div>
+
+          {/* top risk flags summary */}
+          {report.flags.length > 0 && (
+            <div className="mt-4 rounded-card border border-bad/20 bg-bad-soft p-5">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-bad">
+                top risks
+              </div>
+              <div className="mt-2.5 space-y-2">
+                {report.flags.slice(0, 3).map((f) => (
+                  <div key={f.tenant} className="text-sm leading-relaxed text-ink">
+                    <span className="font-semibold text-bad">{f.tenant}</span> — {f.reason}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* taste profile — Qloo's visible signal */}
           {report.tasteProfile && (
@@ -435,32 +475,72 @@ export default function AnalyzePanel() {
               </thead>
               <tbody>
                 {report.tenants.map((t) => (
-                  <tr key={t.name} className="border-b border-line/60 last:border-0 align-top hover:bg-canvas/50">
-                    <td className="px-5 py-3.5 font-medium text-ink">{t.name}</td>
-                    <td className="px-4 py-3.5 text-ink-soft">{CATEGORY_LABEL[t.category] ?? t.category}</td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <div className="overlap-bar w-16">
-                          <div style={{ width: `${Math.round(t.audienceOverlap * 100)}%` }} />
+                  <Fragment key={t.name}>
+                    <tr className="border-b border-line/60 align-top hover:bg-canvas/50">
+                      <td className="px-5 py-3.5">
+                        <button
+                          onClick={() => toggleTenant(t.name)}
+                          className="flex items-center gap-2 font-medium text-ink transition hover:text-forest"
+                        >
+                          <span className={`text-[10px] text-ink-faint transition-transform ${expandedTenants.has(t.name) ? "rotate-90" : ""}`}>▸</span>
+                          {t.name}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3.5 text-ink-soft">{CATEGORY_LABEL[t.category] ?? t.category}</td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <div className="overlap-bar w-16">
+                            <div style={{ width: `${Math.round(t.audienceOverlap * 100)}%` }} />
+                          </div>
+                          <span className="tnum font-mono text-xs text-ink-soft">{Math.round(t.audienceOverlap * 100)}%</span>
                         </div>
-                        <span className="tnum font-mono text-xs text-ink-soft">{Math.round(t.audienceOverlap * 100)}%</span>
-                      </div>
-                    </td>
-                    <td className="tnum px-4 py-3.5 font-mono text-xs text-ink-soft">${t.estimatedRent.toLocaleString()}</td>
-                    <td className="tnum px-4 py-3.5 font-mono text-xs text-ink-soft">{t.expectedTraffic.toLocaleString()}</td>
-                    <td className="tnum px-4 py-3.5 font-mono text-xs text-ink-soft">
-                      {t.spaceNeeded ? `${t.spaceNeeded.toLocaleString()}` : "—"}
-                    </td>
-                    <td className="tnum px-4 py-3.5">
-                      <span className="font-mono text-base font-semibold text-ink">{t.score}</span>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-medium ${VERDICT_STYLE[t.verdict] ?? "bg-canvas text-ink-soft"}`}>
-                        {VERDICT_LABEL[t.verdict] ?? t.verdict}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-xs leading-relaxed text-ink-soft">{t.why}</td>
-                  </tr>
+                      </td>
+                      <td className="tnum px-4 py-3.5 font-mono text-xs text-ink-soft">${t.estimatedRent.toLocaleString()}</td>
+                      <td className="tnum px-4 py-3.5 font-mono text-xs text-ink-soft">{t.expectedTraffic.toLocaleString()}</td>
+                      <td className="tnum px-4 py-3.5 font-mono text-xs text-ink-soft">
+                        {t.spaceNeeded ? `${t.spaceNeeded.toLocaleString()}` : "—"}
+                      </td>
+                      <td className="tnum px-4 py-3.5">
+                        <span className="font-mono text-base font-semibold text-ink">{t.score}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-medium ${VERDICT_STYLE[t.verdict] ?? "bg-canvas text-ink-soft"}`}>
+                          {VERDICT_LABEL[t.verdict] ?? t.verdict}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-xs leading-relaxed text-ink-soft">{t.why}</td>
+                    </tr>
+                    {expandedTenants.has(t.name) && t.details && (
+                      <tr className="border-b border-line/60 bg-canvas/50">
+                        <td colSpan={9} className="px-5 py-4">
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            <div>
+                              <div className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">supporting signals</div>
+                              <div className="mt-1 text-sm text-ink">
+                                {t.details.supportingTags.length > 0 ? t.details.supportingTags.join(", ") : "none"}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">opposing signals</div>
+                              <div className="mt-1 text-sm text-ink">
+                                {t.details.opposingTags.length > 0 ? t.details.opposingTags.join(", ") : "none"}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">fits</div>
+                              <div className="mt-1 text-sm text-ink">
+                                {t.details.budgetFit} · {t.details.trafficFit} · {t.details.spaceFit}
+                              </div>
+                            </div>
+                            <div className="sm:col-span-3">
+                              <div className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">notes</div>
+                              <div className="mt-1 text-sm leading-relaxed text-ink-soft">{t.details.notes}</div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -472,7 +552,13 @@ export default function AnalyzePanel() {
               <div key={t.name} className="rounded-card border border-line bg-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="font-medium text-ink">{t.name}</div>
+                    <button
+                      onClick={() => toggleTenant(t.name)}
+                      className="flex items-center gap-2 font-medium text-ink transition hover:text-forest"
+                    >
+                      <span className={`text-[10px] text-ink-faint transition-transform ${expandedTenants.has(t.name) ? "rotate-90" : ""}`}>▸</span>
+                      {t.name}
+                    </button>
                     <div className="mt-0.5 text-xs text-ink-soft">{CATEGORY_LABEL[t.category] ?? t.category}</div>
                   </div>
                   <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-medium ${VERDICT_STYLE[t.verdict] ?? "bg-canvas text-ink-soft"}`}>
@@ -498,6 +584,23 @@ export default function AnalyzePanel() {
                   </div>
                 </div>
                 <div className="mt-2.5 text-xs leading-relaxed text-ink-soft">{t.why}</div>
+                {expandedTenants.has(t.name) && t.details && (
+                  <div className="mt-3 space-y-2 border-t border-line pt-3">
+                    <div className="text-xs text-ink">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">supporting · </span>
+                      {t.details.supportingTags.length > 0 ? t.details.supportingTags.join(", ") : "none"}
+                    </div>
+                    <div className="text-xs text-ink">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">opposing · </span>
+                      {t.details.opposingTags.length > 0 ? t.details.opposingTags.join(", ") : "none"}
+                    </div>
+                    <div className="text-xs text-ink">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-ink-soft">fits · </span>
+                      {t.details.budgetFit} · {t.details.trafficFit} · {t.details.spaceFit}
+                    </div>
+                    <div className="text-xs leading-relaxed text-ink-soft">{t.details.notes}</div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -16,6 +16,14 @@ export interface Tenant {
   verdict: string;
   why: string;
   flagReason?: string | null;
+  details?: {
+    supportingTags: string[];
+    opposingTags: string[];
+    budgetFit: string;
+    trafficFit: string;
+    spaceFit: string;
+    notes: string;
+  };
 }
 
 export interface ProposedBusiness {
@@ -30,6 +38,7 @@ export interface ProposedBusiness {
     opposingTags: string[];
     budgetFit: string;
     trafficFit: string;
+    spaceFit: string;
     notes: string;
   };
 }
@@ -166,15 +175,24 @@ function findNeighborhood(location: string): NeighborhoodProfile {
   return best ?? DEFAULT_NEIGHBORHOOD;
 }
 
-function scoreTenant(tenant: Omit<Tenant, "score" | "verdict" | "why">, building: Report["building"], tastes: string[]): Tenant {
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  restaurant: ["food", "restaurant", "dining", "cuisine", "wine", "bar", "chef", "farm"],
+  cafe: ["coffee", "cafe", "café", "bakery", "tea", "roastery"],
+  retail: ["fashion", "vintage", "design", "shopping", "brand", "luxury", "streetwear", "vinyl", "records"],
+  entertainment: ["music", "film", "cinema", "live", "venue", "art", "culture"],
+  health: ["wellness", "yoga", "fitness", "health", "gym", "spa"],
+  service: ["service", "bank", "office", "professional", "agency"],
+};
+
+function scoreTenant(tenant: Omit<Tenant, "score" | "verdict" | "why" | "details">, building: Report["building"], tastes: string[]): Tenant {
   const audienceOverlap = tenant.audienceOverlap;
   const categoryWeight = CATEGORY_WEIGHT[tenant.category] ?? 0.5;
-  const budgetFit = tenant.estimatedRent <= building.maxRent ? 1 : 0.3;
-  const trafficFit = tenant.expectedTraffic >= building.minTraffic ? 1 : 0.4;
-  const spaceFit = tenant.spaceNeeded <= building.sqft ? 1 : 0.5;
+  const budgetScore = tenant.estimatedRent <= building.maxRent ? 1 : 0.3;
+  const trafficScore = tenant.expectedTraffic >= building.minTraffic ? 1 : 0.4;
+  const spaceScore = tenant.spaceNeeded <= building.sqft ? 1 : 0.5;
 
   const score = Math.round(
-    (audienceOverlap * 0.5 + categoryWeight * 0.2 + budgetFit * 0.15 + trafficFit * 0.1 + spaceFit * 0.05) * 100
+    (audienceOverlap * 0.5 + categoryWeight * 0.2 + budgetScore * 0.15 + trafficScore * 0.1 + spaceScore * 0.05) * 100
   );
 
   let verdict: string;
@@ -195,7 +213,36 @@ function scoreTenant(tenant: Omit<Tenant, "score" | "verdict" | "why">, building
     why = `overlap ${Math.round(audienceOverlap * 100)}% with local taste (driven by: ${tastes.slice(0, 3).join(", ")})`;
   }
 
-  return { ...tenant, score, verdict, why };
+  // detail digest — supporting/opposing tags, fits, notes
+  const supportingTags = tastes.filter((t) =>
+    (CATEGORY_KEYWORDS[tenant.category] ?? []).some((k) => t.includes(k))
+  ).slice(0, 4);
+  const opposingTags = tastes.filter((t) => !supportingTags.includes(t)).slice(0, 3);
+
+  const budgetFit = tenant.estimatedRent <= building.maxRent ? "within range" : "above budget";
+  const trafficFit = tenant.expectedTraffic >= building.minTraffic ? "meets minimum" : "below minimum";
+  const spaceFit = tenant.spaceNeeded <= building.sqft ? "fits" : "too large";
+
+  const notes = verdict === "strong fit"
+    ? "Strong cultural alignment — this tenant matches the neighborhood's core preferences."
+    : verdict === "moderate fit"
+      ? "Some cultural alignment, but not dominant — check competition and positioning."
+      : "This tenant conflicts with the neighborhood's cultural profile. High risk of underperformance.";
+
+  return {
+    ...tenant,
+    score,
+    verdict,
+    why,
+    details: {
+      supportingTags,
+      opposingTags,
+      budgetFit,
+      trafficFit,
+      spaceFit,
+      notes,
+    },
+  };
 }
 
 // Free-text → category mapping for proposed businesses
@@ -283,6 +330,7 @@ function evaluateProposed(text: string, neighborhood: NeighborhoodProfile, build
       opposingTags: opposing.slice(0, 4),
       budgetFit,
       trafficFit,
+      spaceFit: 2000 <= building.sqft ? "fits" : "too large",
       notes,
     },
   };
