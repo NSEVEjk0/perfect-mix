@@ -3,35 +3,53 @@
 @tailwind utilities;
 
 body {
-  background: #faf9f7;
-  color: #1a1815;
+  background: #F7F6F3;
+  color: #1A1A1A;
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: rgba(180, 120, 60, 0.18);
+  background: rgba(15, 61, 46, 0.12);
 }
 
+/* tabular figures for numbers — the "expensive" detail */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* thin rounded overlap bar */
+.overlap-bar {
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #EFEDE8;
+}
+.overlap-bar > div {
+  height: 100%;
+  border-radius: 999px;
+  background: #0F3D2E;
+}
+
+/* subtle reveal */
 .reveal {
   opacity: 0;
-  animation: revealUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: revealUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-timeline: view();
   animation-range: entry 0% entry 30%;
 }
 @keyframes revealUp {
-  from { opacity: 0; transform: translateY(18px); }
+  from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .hero-in {
   opacity: 0;
-  animation: heroIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: heroIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .hero-in-1 { animation-delay: 0.05s; }
-.hero-in-2 { animation-delay: 0.2s; }
-.hero-in-3 { animation-delay: 0.35s; }
-.hero-in-4 { animation-delay: 0.5s; }
+.hero-in-2 { animation-delay: 0.15s; }
+.hero-in-3 { animation-delay: 0.25s; }
 @keyframes heroIn {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {

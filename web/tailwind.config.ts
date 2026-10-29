@@ -1,26 +1,53 @@
 import type { Config } from "tailwindcss";
+
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        paper: { DEFAULT: "#faf9f7", dim: "#f2f0ec", deep: "#e8e5df" },
-        ink: { DEFAULT: "#1a1815", soft: "#4a463f", faint: "#8a847a" },
-        accent: { DEFAULT: "#b4783c", soft: "#d9a86e", deep: "#8a5728", wash: "#f6efe6" },
-        good: { DEFAULT: "#1b7a4d", soft: "#e6f4ec" },
-        bad: { DEFAULT: "#b03030", soft: "#fbeaea" },
-        line: { DEFAULT: "rgba(26,24,21,0.10)", bright: "rgba(26,24,21,0.16)" },
+        canvas: "#F7F6F3",
+        surface: "#FFFFFF",
+        ink: {
+          DEFAULT: "#1A1A1A",
+          soft: "#6B6B6B",
+          faint: "#9A9A9A",
+        },
+        forest: {
+          DEFAULT: "#0F3D2E",
+          hover: "#0B2F24",
+        },
+        good: {
+          DEFAULT: "#1B7A4E",
+          soft: "#E8F5EE",
+        },
+        moderate: {
+          DEFAULT: "#B45309",
+          soft: "#FEF3E8",
+        },
+        bad: {
+          DEFAULT: "#B91C1C",
+          soft: "#FEE2E2",
+        },
+        line: {
+          DEFAULT: "#E8E6E1",
+          bright: "#EFEDE8",
+        },
       },
       fontFamily: {
-        sans: ["var(--font-host)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist)", "ui-monospace", "monospace"],
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        mono: ["var(--font-jetbrains)", "ui-monospace", "monospace"],
+      },
+      borderRadius: {
+        card: "14px",
+        input: "8px",
       },
       boxShadow: {
-        card: "0 1px 2px rgba(26,24,21,0.04), 0 24px 60px -24px rgba(26,24,21,0.10)",
-        "card-lg": "0 2px 4px rgba(26,24,21,0.05), 0 40px 90px -40px rgba(26,24,21,0.16)",
+        soft: "0 1px 2px rgba(26,26,26,0.04), 0 8px 24px -8px rgba(26,26,26,0.06)",
+        "soft-hover": "0 2px 4px rgba(26,26,26,0.05), 0 16px 40px -12px rgba(26,26,26,0.10)",
       },
     },
   },
   plugins: [],
 };
+
 export default config;
