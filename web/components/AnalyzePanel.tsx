@@ -26,6 +26,12 @@ const VERDICT_LABEL: Record<string, string> = {
   mismatch: "Mismatch",
 };
 
+const EXAMPLE_NEIGHBORHOODS = [
+  "Williamsburg, Brooklyn, NY",
+  "The Mission, San Francisco, CA",
+  "West Loop, Chicago, IL",
+];
+
 export default function AnalyzePanel() {
   const [location, setLocation] = useState("Williamsburg, Brooklyn, NY");
   const [maxRent, setMaxRent] = useState("15000");
@@ -77,6 +83,11 @@ export default function AnalyzePanel() {
 
   return (
     <div className="rounded-card border border-line bg-surface p-6 shadow-soft sm:p-7">
+      {/* card title */}
+      <div className="mb-5 font-mono text-[11px] font-medium uppercase tracking-widest text-ink-soft">
+        New analysis
+      </div>
+
       {/* inputs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div>
@@ -86,7 +97,7 @@ export default function AnalyzePanel() {
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g. Williamsburg, Brooklyn, NY"
+            placeholder="Neighborhood or address, e.g. Williamsburg, Brooklyn"
             className="w-full rounded-input border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-faint focus:border-forest/40 focus:ring-2 focus:ring-forest/10"
           />
         </div>
@@ -132,28 +143,49 @@ export default function AnalyzePanel() {
           disabled={loading}
           className="rounded-input bg-forest px-5 py-2.5 text-sm font-medium text-white transition hover:bg-forest-hover disabled:opacity-50"
         >
-          {loading ? "Reading the neighborhood's taste…" : "Analyze location"}
+          {loading ? "Reading local taste…" : "Generate tenant mix"}
         </button>
 
         {/* mode toggle pill */}
-        <div className="flex items-center gap-1 rounded-full border border-line bg-canvas p-0.5">
-          <button
-            onClick={() => setMode("demo")}
-            className={`rounded-full px-3 py-1 font-mono text-[10px] transition ${
-              mode === "demo" ? "bg-surface text-ink shadow-soft" : "text-ink-soft hover:text-ink"
-            }`}
-          >
-            Demo data
-          </button>
-          <button
-            onClick={() => setMode("live")}
-            className={`rounded-full px-3 py-1 font-mono text-[10px] transition ${
-              mode === "live" ? "bg-surface text-ink shadow-soft" : "text-ink-soft hover:text-ink"
-            }`}
-          >
-            Live Qloo
-          </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 rounded-full border border-line bg-canvas p-0.5">
+            <button
+              onClick={() => setMode("demo")}
+              className={`rounded-full px-3 py-1 font-mono text-[10px] transition ${
+                mode === "demo" ? "bg-surface text-ink shadow-soft" : "text-ink-soft hover:text-ink"
+              }`}
+            >
+              Demo data
+            </button>
+            <button
+              onClick={() => setMode("live")}
+              className={`rounded-full px-3 py-1 font-mono text-[10px] transition ${
+                mode === "live" ? "bg-surface text-ink shadow-soft" : "text-ink-soft hover:text-ink"
+              }`}
+            >
+              Live Qloo
+            </button>
+          </div>
+          <span className="hidden text-xs text-ink-faint sm:block">
+            Demo uses curated neighborhoods. Live uses the Qloo Taste API.
+          </span>
         </div>
+      </div>
+
+      {/* example neighborhoods */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-ink-faint">
+          example neighborhoods
+        </span>
+        {EXAMPLE_NEIGHBORHOODS.map((n) => (
+          <button
+            key={n}
+            onClick={() => setLocation(n)}
+            className="rounded-full border border-line px-3 py-1 text-xs text-ink-soft transition hover:border-forest/30 hover:text-forest"
+          >
+            {n.split(",")[0]}
+          </button>
+        ))}
       </div>
 
       {/* empty state */}
@@ -332,6 +364,11 @@ export default function AnalyzePanel() {
               </div>
             </div>
           )}
+
+          {/* report footer */}
+          <div className="mt-6 font-mono text-[11px] text-ink-faint">
+            Generated for {report.location} · {report.building.sqft.toLocaleString()} sq ft · max rent ${report.building.maxRent.toLocaleString()}/mo
+          </div>
 
           {/* trace */}
           {report.trace && report.trace.length > 0 && (
