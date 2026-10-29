@@ -1,25 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-interface Tenant {
-  name: string;
-  category: string;
-  audienceOverlap: number;
-  estimatedRent: number;
-  expectedTraffic: number;
-  score: number;
-  verdict: string;
-  flagReason?: string | null;
-}
-
-interface Report {
-  location: string;
-  building: { maxRent: number; minTraffic: number; sqft: number };
-  summary: { totalTenants: number; strongFits: number; mismatches: number; recommendedMix: string[] };
-  tenants: Tenant[];
-  flags: { tenant: string; reason: string }[];
-}
+import { analyzeDemo, type Report } from "@/lib/demoEngine";
 
 const CATEGORY_LABEL: Record<string, string> = {
   restaurant: "Restaurant",
@@ -50,6 +32,18 @@ export default function AnalyzePanel() {
     setLoading(true);
     setError("");
     setReport(null);
+
+    // Demo mode runs entirely in the browser — the deployed site works
+    // standalone, no backend needed.
+    if (mode === "demo") {
+      await new Promise((r) => setTimeout(r, 600)); // brief deliberate pause
+      const result = analyzeDemo(location, Number(maxRent), Number(minTraffic), Number(sqft));
+      setReport(result);
+      setLoading(false);
+      return;
+    }
+
+    // Live mode requires the agent + Qloo key.
     try {
       const res = await fetch("http://127.0.0.1:4180/analyze", {
         method: "POST",
