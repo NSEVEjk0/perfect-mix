@@ -1,7 +1,7 @@
 /**
  * TENANT MIX AGENT — prescriptive retail real estate.
  *
- * A location + building profile in, a prescriptive tenant mix out.
+ * A location + building profile in, a prescriptive perfect mix out.
  * Uses Qloo's Taste API (locality intelligence + cross-domain taste)
  * to recommend the specific tenants whose audiences match the
  * neighborhood — and flags mismatches.
@@ -226,4 +226,4 @@ const server = http.createServer((req, res) => {
   res.end(JSON.stringify({ error: "not found" }));
 });
 
-server.listen(PORT, () => console.log(`[tenant-mix] listening on :${PORT} (${QLOO_KEY ? "live Qloo" : "demo mode"})`));
+server.listen(PORT, () => console.log(`[perfect-mix] listening on :${PORT} (${QLOO_KEY ? "live Qloo" : "demo mode"})`));
