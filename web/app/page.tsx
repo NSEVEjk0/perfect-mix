@@ -33,19 +33,57 @@ export default function Home() {
       </nav>
 
       {/* HERO */}
-      <header className="mx-auto max-w-5xl px-6 pt-14 pb-8">
+      <header className="mx-auto max-w-5xl px-6 pt-14 pb-6">
         <div className="hero-in hero-in-1 font-mono text-[11px] uppercase tracking-[0.22em] text-forest">
-          Prescriptive tenant mix
+          Prescriptive retail real estate
         </div>
         <h1 className="hero-in hero-in-2 mt-3 max-w-2xl text-3xl font-semibold tracking-[-0.01em] text-ink sm:text-4xl">
-          Prescribe the right tenants for this address.
+          Stop guessing the tenant mix.
         </h1>
-        <p className="hero-in hero-in-3 mt-3 max-w-xl text-[15px] leading-relaxed text-ink-soft">
-          Perfect Mix reads the cultural taste of a neighborhood — not just its demographics —
-          and returns a scored, reasoned tenant mix with clear risk flags. Built for developers
-          and landlords who can't afford the wrong storefront.
+        <p className="hero-in hero-in-3 mt-3 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
+          Most new retail spaces fail because the tenants don't match what the neighborhood
+          actually wants. Perfect Mix uses Qloo's cultural taste intelligence to prescribe the
+          specific restaurants, brands, and services whose audiences fit the location — then
+          scores them with clear reasons and risk flags.
         </p>
       </header>
+
+      {/* PROBLEM / SOLUTION / WHY QLOO */}
+      <section className="mx-auto max-w-5xl px-6 pb-8">
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="hero-in hero-in-2 rounded-card border border-line bg-surface p-5">
+            <div className="font-mono text-[10px] font-medium uppercase tracking-widest text-ink-soft">
+              the problem
+            </div>
+            <p className="mt-2.5 text-sm leading-relaxed text-ink-soft">
+              Demographics tell you who lives nearby. They don't tell you what those people will
+              actually buy, eat, or visit. Two blocks with identical income and age profiles can
+              demand completely different tenants. Getting the mix wrong costs millions in lost
+              rent and failed openings.
+            </p>
+          </div>
+          <div className="hero-in hero-in-3 rounded-card border border-line bg-surface p-5">
+            <div className="font-mono text-[10px] font-medium uppercase tracking-widest text-forest">
+              the solution
+            </div>
+            <p className="mt-2.5 text-sm leading-relaxed text-ink-soft">
+              Perfect Mix reads the cultural taste of a precise location via Qloo, evaluates
+              candidate tenants against that taste, and returns a scored, reasoned mix. It flags
+              mismatches before you lease.
+            </p>
+          </div>
+          <div className="hero-in hero-in-3 rounded-card border border-line bg-surface p-5">
+            <div className="font-mono text-[10px] font-medium uppercase tracking-widest text-ink-soft">
+              why qloo
+            </div>
+            <p className="mt-2.5 text-sm leading-relaxed text-ink-soft">
+              Qloo's cultural graph models what places and people actually like — across
+              restaurants, brands, music, and more. That's the signal standard demographics
+              miss.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* ANALYSIS PANEL */}
       <section className="mx-auto max-w-5xl px-6 pb-10">
@@ -94,12 +132,9 @@ export default function Home() {
       <footer className="border-t border-line">
         <div className="mx-auto max-w-5xl px-6 py-6">
           <div className="font-mono text-[11px] text-ink-soft">
-            Perfect Mix · Qloo Agentic Hackathon
+            Perfect Mix · Qloo Agentic Hackathon — The tenant mix is a multi-million-dollar
+            decision. It should be made on data.
           </div>
-          <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-ink-faint">
-            A prescriptive decision engine for retail real estate. The tenant mix is a
-            multi-million-dollar bet — it should be made on data.
-          </p>
         </div>
       </footer>
     </main>

@@ -192,7 +192,7 @@ export default function AnalyzePanel() {
       {!report && !loading && !error && (
         <div className="mt-8 rounded-card border border-dashed border-line py-12 text-center">
           <p className="text-sm text-ink-soft">
-            Enter a location and building profile to generate a tenant mix.
+            Enter a location and building constraints to see a recommended tenant mix.
           </p>
         </div>
       )}
