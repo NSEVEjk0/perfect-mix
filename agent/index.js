@@ -265,6 +265,99 @@ function generateCandidates(tasteTags, building) {
 }
 
 // ---------------------------------------------------------------
+// Proposed-business evaluation — test a specific idea
+// ---------------------------------------------------------------
+
+const PROPOSED_CATEGORY_KEYWORDS = {
+  restaurant: ["restaurant", "bistro", "eatery", "vegan", "wine bar", "taqueria", "food", "kitchen", "diner", "sushi"],
+  cafe: ["coffee", "cafe", "café", "roaster", "bakery", "tea", "espresso"],
+  retail: ["vintage", "clothing", "store", "boutique", "retail", "shop", "fashion", "vinyl", "records", "jewelry", "books"],
+  entertainment: ["cinema", "theater", "theatre", "music", "venue", "gallery", "arcade", "comedy", "live"],
+  health: ["yoga", "gym", "fitness", "wellness", "spa", "pilates", "studio", "health"],
+  service: ["bank", "office", "agency", "service", "coworking", "co-working", "salon", "barber", "repair"],
+};
+
+function categorizeProposed(text) {
+  const t = text.toLowerCase();
+  let best = "service";
+  let bestScore = 0;
+  for (const [cat, keywords] of Object.entries(PROPOSED_CATEGORY_KEYWORDS)) {
+    for (const k of keywords) {
+      if (t.includes(k)) {
+        if (k.length > bestScore) {
+          bestScore = k.length;
+          best = cat;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function evaluateProposed(text, tasteTags, building) {
+  const category = categorizeProposed(text);
+  const name = text.trim().replace(/\s+/g, " ");
+
+  const keywords = PROPOSED_CATEGORY_KEYWORDS[category] ?? [];
+  let hits = 0;
+  const supporting = [];
+  const opposing = [];
+  for (const { tag } of tasteTags) {
+    const t = String(tag).toLowerCase();
+    if (keywords.some((k) => t.includes(k)) || t.includes(category)) {
+      hits += 1;
+      supporting.push(tag);
+    } else {
+      opposing.push(tag);
+    }
+  }
+  const audienceOverlap = tasteTags.length > 0
+    ? Math.min(1, hits / tasteTags.length + 0.4)
+    : 0.5;
+
+  const categoryWeight = CATEGORY_WEIGHT[category] ?? 0.5;
+  const budgetFit = 15000 <= building.maxRent ? "within range" : "above budget";
+  const trafficFit = 500 >= building.minTraffic ? "meets minimum" : "below minimum";
+  const spaceFit = 2000 <= building.sqft ? 1 : 0.5;
+
+  const score = Math.round(
+    (audienceOverlap * 0.5 + categoryWeight * 0.2 + (budgetFit === "within range" ? 1 : 0.3) * 0.15 + (trafficFit === "meets minimum" ? 1 : 0.4) * 0.1 + spaceFit * 0.05) * 100
+  );
+
+  let verdict;
+  if (audienceOverlap < 0.3) verdict = "mismatch";
+  else if (score >= 75) verdict = "strong fit";
+  else if (score >= 55) verdict = "moderate fit";
+  else verdict = "mismatch";
+
+  const why = verdict === "mismatch"
+    ? `Low audience overlap with this location's dominant tastes (${supporting.slice(0, 2).join(", ") || "no matching signals"}).`
+    : `High overlap with local ${supporting.slice(0, 2).join(" and ") || "cultural"} signals.`;
+
+  const notes = verdict === "strong fit"
+    ? "Strong cultural alignment — this category matches the neighborhood's core preferences."
+    : verdict === "moderate fit"
+      ? "Some cultural alignment, but the fit is not dominant — check competition and positioning."
+      : "This business type conflicts with the neighborhood's cultural profile. High risk of underperformance.";
+
+  return {
+    name,
+    category,
+    verdict,
+    score,
+    audienceOverlap,
+    why,
+    details: {
+      supportingTags: supporting.slice(0, 4),
+      opposingTags: opposing.slice(0, 4),
+      budgetFit,
+      trafficFit,
+      notes,
+    },
+  };
+}
+
+// ---------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------
 
@@ -332,6 +425,7 @@ const server = http.createServer((req, res) => {
       let input = {};
       try { input = JSON.parse(body); } catch { /* empty */ }
       const location = String(input.location ?? "Williamsburg, Brooklyn, NY");
+      const proposedBusiness = String(input.proposedBusiness ?? "").trim();
       const building = {
         maxRent: Number(input.maxRent ?? 15000),
         minTraffic: Number(input.minTraffic ?? 400),
@@ -392,7 +486,14 @@ const server = http.createServer((req, res) => {
         // step 5: flag
         trace.push({ step: "flag", mismatches: report.flags.length });
 
-        res.end(JSON.stringify({ ok: true, mode: QLOO_KEY ? "live" : "demo", ...report }));
+        // step 6: evaluate a proposed business (optional)
+        let proposed = null;
+        if (proposedBusiness) {
+          proposed = evaluateProposed(proposedBusiness, tasteTags, building);
+          trace.push({ step: "evaluate_proposed", result: proposed.name, count: 1 });
+        }
+
+        res.end(JSON.stringify({ ok: true, mode: QLOO_KEY ? "live" : "demo", ...report, proposed }));
       } catch (e) {
         res.statusCode = 502;
         res.end(JSON.stringify({ ok: false, error: String(e.message ?? e), trace }));

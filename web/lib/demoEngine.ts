@@ -18,6 +18,22 @@ export interface Tenant {
   flagReason?: string | null;
 }
 
+export interface ProposedBusiness {
+  name: string;
+  category: string;
+  verdict: string;
+  score: number;
+  audienceOverlap: number;
+  why: string;
+  details: {
+    supportingTags: string[];
+    opposingTags: string[];
+    budgetFit: string;
+    trafficFit: string;
+    notes: string;
+  };
+}
+
 export interface Report {
   location: string;
   building: { maxRent: number; minTraffic: number; sqft: number };
@@ -32,6 +48,7 @@ export interface Report {
   tenants: Tenant[];
   flags: { tenant: string; reason: string }[];
   trace?: { step: string; result?: string; count?: number; error?: string; tags?: string[] }[];
+  proposed?: ProposedBusiness;
   mode: "demo" | "live";
 }
 
@@ -160,7 +177,97 @@ function scoreTenant(tenant: Omit<Tenant, "score" | "verdict" | "why">, building
   return { ...tenant, score, verdict, why };
 }
 
-export function analyzeDemo(location: string, maxRent: number, minTraffic: number, sqft: number): Report {
+// Free-text → category mapping for proposed businesses
+const PROPOSED_CATEGORY_KEYWORDS: Record<string, string[]> = {
+  restaurant: ["restaurant", "bistro", "eatery", "vegan", "wine bar", "taqueria", "food", "kitchen", "diner", "sushi"],
+  cafe: ["coffee", "cafe", "café", "roaster", "bakery", "tea", "espresso"],
+  retail: ["vintage", "clothing", "store", "boutique", "retail", "shop", "fashion", "vinyl", "records", "jewelry", "books"],
+  entertainment: ["cinema", "theater", "theatre", "music", "venue", "gallery", "arcade", "comedy", "live"],
+  health: ["yoga", "gym", "fitness", "wellness", "spa", "pilates", "studio", "health"],
+  service: ["bank", "office", "agency", "service", "coworking", "co-working", "salon", "barber", "repair"],
+};
+
+function categorizeProposed(text: string): string {
+  const t = text.toLowerCase();
+  let best = "service";
+  let bestScore = 0;
+  for (const [cat, keywords] of Object.entries(PROPOSED_CATEGORY_KEYWORDS)) {
+    for (const k of keywords) {
+      if (t.includes(k)) {
+        const score = k.length;
+        if (score > bestScore) {
+          bestScore = score;
+          best = cat;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function evaluateProposed(text: string, neighborhood: NeighborhoodProfile, building: Report["building"]): ProposedBusiness {
+  const category = categorizeProposed(text);
+  const name = text.trim().replace(/\s+/g, " ");
+
+  // score against the neighborhood's dominant tastes
+  const keywords = PROPOSED_CATEGORY_KEYWORDS[category] ?? [];
+  let hits = 0;
+  const supporting: string[] = [];
+  const opposing: string[] = [];
+  for (const taste of neighborhood.dominantTastes) {
+    const matches = keywords.some((k) => taste.includes(k)) || taste.includes(category);
+    if (matches) {
+      hits += 1;
+      supporting.push(taste);
+    }
+  }
+  const audienceOverlap = neighborhood.dominantTastes.length > 0
+    ? Math.min(1, hits / neighborhood.dominantTastes.length + 0.4)
+    : 0.5;
+
+  const categoryWeight = CATEGORY_WEIGHT[category] ?? 0.5;
+  const budgetFit = 15000 <= building.maxRent ? "within range" : "above budget";
+  const trafficFit = 500 >= building.minTraffic ? "meets minimum" : "below minimum";
+  const spaceFit = 2000 <= building.sqft ? 1 : 0.5;
+
+  const score = Math.round(
+    (audienceOverlap * 0.5 + categoryWeight * 0.2 + (budgetFit === "within range" ? 1 : 0.3) * 0.15 + (trafficFit === "meets minimum" ? 1 : 0.4) * 0.1 + spaceFit * 0.05) * 100
+  );
+
+  let verdict: string;
+  if (audienceOverlap < 0.3) verdict = "mismatch";
+  else if (score >= 75) verdict = "strong fit";
+  else if (score >= 55) verdict = "moderate fit";
+  else verdict = "mismatch";
+
+  const why = verdict === "mismatch"
+    ? `Low audience overlap with ${neighborhood.name}'s dominant tastes (${neighborhood.dominantTastes.slice(0, 3).join(", ")}).`
+    : `High overlap with local ${supporting.slice(0, 2).join(" and ") || "cultural"} signals.`;
+
+  const notes = verdict === "strong fit"
+    ? "Strong cultural alignment — this category matches the neighborhood's core preferences."
+    : verdict === "moderate fit"
+      ? "Some cultural alignment, but the fit is not dominant — check competition and positioning."
+      : "This business type conflicts with the neighborhood's cultural profile. High risk of underperformance.";
+
+  return {
+    name,
+    category,
+    verdict,
+    score,
+    audienceOverlap,
+    why,
+    details: {
+      supportingTags: supporting.slice(0, 4),
+      opposingTags: opposing.slice(0, 4),
+      budgetFit,
+      trafficFit,
+      notes,
+    },
+  };
+}
+
+export function analyzeDemo(location: string, maxRent: number, minTraffic: number, sqft: number, proposedBusiness?: string): Report {
   const neighborhood = findNeighborhood(location);
   const building = { maxRent, minTraffic, sqft };
 
@@ -182,6 +289,10 @@ export function analyzeDemo(location: string, maxRent: number, minTraffic: numbe
 
   const narrative = `For this ${sqft.toLocaleString()} sq ft space in ${neighborhood.name}, prioritize a ${strong.slice(0, 3).map((t) => t.name.toLowerCase()).join(" + ")} cluster — these tenants show the strongest audience overlap with the neighborhood's taste.`;
 
+  const proposed = proposedBusiness?.trim()
+    ? evaluateProposed(proposedBusiness, neighborhood, building)
+    : undefined;
+
   return {
     location: neighborhood.name,
     building,
@@ -201,7 +312,9 @@ export function analyzeDemo(location: string, maxRent: number, minTraffic: numbe
       { step: "generate_candidates", count: tenants.length },
       { step: "score", count: tenants.length },
       { step: "flag", count: mismatch.length },
+      ...(proposed ? [{ step: "evaluate_proposed", result: proposed.name, count: 1 }] : []),
     ],
+    proposed,
     mode: "demo",
   };
 }
