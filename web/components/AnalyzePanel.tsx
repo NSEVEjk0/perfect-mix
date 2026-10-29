@@ -85,12 +85,7 @@ export default function AnalyzePanel() {
   };
 
   return (
-    <div className="rounded-card border border-line bg-surface p-6 shadow-soft sm:p-7">
-      {/* card title */}
-      <div className="mb-5 font-mono text-[11px] font-medium uppercase tracking-widest text-ink-soft">
-        New analysis
-      </div>
-
+    <div className="rounded-card border border-line bg-surface p-6 shadow-soft sm:p-8">
       {/* inputs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div>
