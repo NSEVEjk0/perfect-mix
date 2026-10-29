@@ -60,7 +60,28 @@ Set `QLOO_KEY` in the agent's environment and the agent switches from demo to li
 QLOO_KEY=your_key TM_PORT=4180 node agent/index.js
 ```
 
-The agent calls Qloo's `/taste` endpoint to build the location's taste profile, then `/recommendations` per category to source tenant candidates — so Qloo is load-bearing, not decorative.
+The agent uses the **Qloo hackathon API** (`https://hackathon.api.qloo.com`, header `X-Api-Key`):
+
+1. **Resolve location** — `GET /search?q=<location>&type=place`
+2. **Fetch locality taste** — `POST /v2/insights` with `filter.type: "taste"` and `signal.location.query`
+3. **Generate candidates** per category, grounded in the returned taste tags/entities
+4. **Score** every tenant with a traceable "why" (audience overlap, category fit, rent, traffic, space)
+5. **Flag** mismatches via the hard gate (overlap < 30%)
+
+The agent logs every step to a `trace` array returned in the report — so judges can see Qloo is load-bearing, not decorative.
+
+### How to run the live demo
+
+```bash
+# 1. Get a Qloo hackathon API key (register via the hackathon)
+# 2. Start the agent
+QLOO_KEY=your_key TM_PORT=4180 node agent/index.js
+# 3. Point the web app at it
+cd web
+NEXT_PUBLIC_AGENT_URL=http://your-server:4180 npm run build
+```
+
+Without a key, the deployed site runs the identical scoring engine client-side with curated neighborhood data — fully standalone.
 
 ### Demo mode (standalone)
 

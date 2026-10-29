@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { analyzeDemo, type Report } from "@/lib/demoEngine";
 
+const LIVE_URL = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://127.0.0.1:4180";
+
 const CATEGORY_LABEL: Record<string, string> = {
   restaurant: "Restaurant",
   cafe: "Café",
@@ -33,19 +35,16 @@ export default function AnalyzePanel() {
     setError("");
     setReport(null);
 
-    // Demo mode runs entirely in the browser — the deployed site works
-    // standalone, no backend needed.
     if (mode === "demo") {
-      await new Promise((r) => setTimeout(r, 600)); // brief deliberate pause
+      await new Promise((r) => setTimeout(r, 600));
       const result = analyzeDemo(location, Number(maxRent), Number(minTraffic), Number(sqft));
       setReport(result);
       setLoading(false);
       return;
     }
 
-    // Live mode requires the agent + Qloo key.
     try {
-      const res = await fetch("http://127.0.0.1:4180/analyze", {
+      const res = await fetch(`${LIVE_URL}/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -153,8 +152,21 @@ export default function AnalyzePanel() {
       {/* report */}
       {report && !loading && (
         <div className="mt-8">
+          {/* report badge */}
+          <div className="mb-4 flex items-center gap-2">
+            <span className={`rounded-full border px-2.5 py-0.5 font-mono text-[10px] ${report.mode === "demo" ? "border-accent/40 bg-accent-wash text-accent-deep" : "border-good/30 bg-good-soft text-good"}`}>
+              {report.mode === "demo" ? "demo data" : "live Qloo"}
+            </span>
+            <span className="font-mono text-[10px] text-ink-faint">report</span>
+          </div>
+
+          {/* narrative */}
+          <div className="rounded-xl border border-accent/30 bg-accent-wash p-4">
+            <p className="text-sm leading-relaxed text-ink">{report.summary.narrative}</p>
+          </div>
+
           {/* summary */}
-          <div className="grid gap-4 sm:grid-cols-4">
+          <div className="mt-4 grid gap-4 sm:grid-cols-4">
             <div className="rounded-xl border border-line bg-paper-dim p-4">
               <div className="font-mono text-2xl font-bold text-ink">{report.summary.strongFits}</div>
               <div className="mt-1 font-mono text-[10px] uppercase tracking-widest text-ink-faint">strong fits</div>
@@ -177,8 +189,24 @@ export default function AnalyzePanel() {
             </div>
           </div>
 
+          {/* category balance */}
+          <div className="mt-4 rounded-xl border border-line p-4">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-ink-faint">category balance</div>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {report.summary.balance.map((b) => (
+                <div key={b.category} className="flex items-center gap-2">
+                  <span className="text-sm text-ink">{b.category}</span>
+                  <div className="h-1.5 w-20 overflow-hidden rounded-full bg-line/40">
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${b.pct}%` }} />
+                  </div>
+                  <span className="font-mono text-xs text-ink-soft">{b.pct}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* tenant table */}
-          <div className="mt-6 overflow-x-auto rounded-xl border border-line">
+          <div className="mt-4 overflow-x-auto rounded-xl border border-line">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line bg-paper-dim text-left font-mono text-[10px] uppercase tracking-widest text-ink-faint">
@@ -189,11 +217,12 @@ export default function AnalyzePanel() {
                   <th className="px-4 py-2.5 font-medium">traffic</th>
                   <th className="px-4 py-2.5 font-medium">score</th>
                   <th className="px-4 py-2.5 font-medium">verdict</th>
+                  <th className="px-4 py-2.5 font-medium">why</th>
                 </tr>
               </thead>
               <tbody>
                 {report.tenants.map((t) => (
-                  <tr key={t.name} className="border-b border-line/60 last:border-0">
+                  <tr key={t.name} className="border-b border-line/60 last:border-0 align-top">
                     <td className="px-4 py-2.5 font-medium text-ink">{t.name}</td>
                     <td className="px-4 py-2.5 text-ink-soft">{CATEGORY_LABEL[t.category] ?? t.category}</td>
                     <td className="px-4 py-2.5">
@@ -217,6 +246,7 @@ export default function AnalyzePanel() {
                         {t.verdict}
                       </span>
                     </td>
+                    <td className="px-4 py-2.5 text-xs leading-relaxed text-ink-soft">{t.why}</td>
                   </tr>
                 ))}
               </tbody>
@@ -225,7 +255,7 @@ export default function AnalyzePanel() {
 
           {/* flags */}
           {report.flags.length > 0 && (
-            <div className="mt-6 rounded-xl border border-bad/30 bg-bad-soft p-4">
+            <div className="mt-4 rounded-xl border border-bad/30 bg-bad-soft p-4">
               <div className="font-mono text-[10px] uppercase tracking-widest text-bad">risk flags</div>
               <div className="mt-2 space-y-2">
                 {report.flags.map((f) => (

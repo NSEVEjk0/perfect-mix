@@ -1,10 +1,8 @@
 /**
  * Perfect Mix — client-side demo engine.
  *
- * When no Qloo API key is configured, the analysis runs entirely in the
- * browser. This keeps the deployed demo fully functional and standalone.
- * The scoring logic mirrors the agent exactly, so switching to live mode
- * (with a Qloo key) produces the same shape of report.
+ * Runs entirely in the browser when no Qloo key is configured, so the
+ * deployed demo is fully standalone. Scoring mirrors the agent exactly.
  */
 
 export interface Tenant {
@@ -13,15 +11,24 @@ export interface Tenant {
   audienceOverlap: number;
   estimatedRent: number;
   expectedTraffic: number;
+  spaceNeeded: number;
   score: number;
   verdict: string;
+  why: string;
   flagReason?: string | null;
 }
 
 export interface Report {
   location: string;
   building: { maxRent: number; minTraffic: number; sqft: number };
-  summary: { totalTenants: number; strongFits: number; mismatches: number; recommendedMix: string[] };
+  summary: {
+    totalTenants: number;
+    strongFits: number;
+    mismatches: number;
+    recommendedMix: string[];
+    narrative: string;
+    balance: { category: string; count: number; pct: number }[];
+  };
   tenants: Tenant[];
   flags: { tenant: string; reason: string }[];
   mode: "demo";
@@ -31,9 +38,7 @@ interface NeighborhoodProfile {
   name: string;
   aliases: string[];
   dominantTastes: string[];
-  incomeBand: string;
-  footTraffic: string;
-  tenants: Omit<Tenant, "score" | "verdict">[];
+  tenants: Omit<Tenant, "score" | "verdict" | "why">[];
 }
 
 const CATEGORY_WEIGHT: Record<string, number> = {
@@ -45,77 +50,92 @@ const CATEGORY_WEIGHT: Record<string, number> = {
   service: 0.5,
 };
 
+const CATEGORY_LABEL: Record<string, string> = {
+  restaurant: "Restaurant",
+  cafe: "Café",
+  retail: "Retail",
+  entertainment: "Entertainment",
+  health: "Health & Wellness",
+  service: "Service",
+};
+
 const NEIGHBORHOODS: NeighborhoodProfile[] = [
   {
     name: "Williamsburg, Brooklyn, NY",
     aliases: ["williamsburg", "brooklyn", "ny", "new york"],
     dominantTastes: ["indie music", "craft coffee", "natural wine", "vintage fashion", "farm-to-table"],
-    incomeBand: "upper-middle",
-    footTraffic: "high",
     tenants: [
-      { name: "Third Wave Coffee Lab", category: "cafe", audienceOverlap: 0.92, estimatedRent: 8000, expectedTraffic: 900, flagReason: null },
-      { name: "Natural Wine Bar", category: "restaurant", audienceOverlap: 0.88, estimatedRent: 11000, expectedTraffic: 700, flagReason: null },
-      { name: "Vintage Denim Studio", category: "retail", audienceOverlap: 0.85, estimatedRent: 9500, expectedTraffic: 500, flagReason: null },
-      { name: "Farm-to-Table Kitchen", category: "restaurant", audienceOverlap: 0.78, estimatedRent: 13000, expectedTraffic: 800, flagReason: null },
-      { name: "Independent Cinema", category: "entertainment", audienceOverlap: 0.74, estimatedRent: 18000, expectedTraffic: 1200, flagReason: null },
-      { name: "Vinyl & Vintage Records", category: "retail", audienceOverlap: 0.82, estimatedRent: 7000, expectedTraffic: 450, flagReason: null },
-      { name: "Hot Yoga Studio", category: "health", audienceOverlap: 0.68, estimatedRent: 9000, expectedTraffic: 350, flagReason: null },
-      { name: "Discount Electronics Outlet", category: "retail", audienceOverlap: 0.22, estimatedRent: 9000, expectedTraffic: 600, flagReason: "local taste skews curated/vintage; discount electronics underperforms" },
-      { name: "Fast-Food Chain", category: "restaurant", audienceOverlap: 0.18, estimatedRent: 14000, expectedTraffic: 1100, flagReason: "chain fast food conflicts with the neighborhood's farm-to-table preference" },
+      { name: "Third Wave Coffee Lab", category: "cafe", audienceOverlap: 0.92, estimatedRent: 8000, expectedTraffic: 900, spaceNeeded: 1500, flagReason: null },
+      { name: "Natural Wine Bar", category: "restaurant", audienceOverlap: 0.88, estimatedRent: 11000, expectedTraffic: 700, spaceNeeded: 1800, flagReason: null },
+      { name: "Vintage Denim Studio", category: "retail", audienceOverlap: 0.85, estimatedRent: 9500, expectedTraffic: 500, spaceNeeded: 2200, flagReason: null },
+      { name: "Farm-to-Table Kitchen", category: "restaurant", audienceOverlap: 0.78, estimatedRent: 13000, expectedTraffic: 800, spaceNeeded: 2500, flagReason: null },
+      { name: "Independent Cinema", category: "entertainment", audienceOverlap: 0.74, estimatedRent: 18000, expectedTraffic: 1200, spaceNeeded: 6000, flagReason: null },
+      { name: "Vinyl & Vintage Records", category: "retail", audienceOverlap: 0.82, estimatedRent: 7000, expectedTraffic: 450, spaceNeeded: 1800, flagReason: null },
+      { name: "Hot Yoga Studio", category: "health", audienceOverlap: 0.68, estimatedRent: 9000, expectedTraffic: 350, spaceNeeded: 1800, flagReason: null },
+      { name: "Discount Electronics Outlet", category: "retail", audienceOverlap: 0.22, estimatedRent: 9000, expectedTraffic: 600, spaceNeeded: 3000, flagReason: "local taste skews curated/vintage; discount electronics underperforms" },
+      { name: "Fast-Food Chain", category: "restaurant", audienceOverlap: 0.18, estimatedRent: 14000, expectedTraffic: 1100, spaceNeeded: 2000, flagReason: "chain fast food conflicts with the neighborhood's farm-to-table preference" },
     ],
   },
   {
     name: "The Mission, San Francisco, CA",
     aliases: ["mission", "san francisco", "sf", "california"],
     dominantTastes: ["burritos", "craft beer", "punk rock", "street art", "tech culture"],
-    incomeBand: "mixed",
-    footTraffic: "very high",
     tenants: [
-      { name: "Taqueria Moderna", category: "restaurant", audienceOverlap: 0.94, estimatedRent: 9000, expectedTraffic: 1100, flagReason: null },
-      { name: "Craft Beer Hall", category: "restaurant", audienceOverlap: 0.87, estimatedRent: 12000, expectedTraffic: 900, flagReason: null },
-      { name: "Vintage Streetwear", category: "retail", audienceOverlap: 0.83, estimatedRent: 8000, expectedTraffic: 600, flagReason: null },
-      { name: "Live Music Venue", category: "entertainment", audienceOverlap: 0.8, estimatedRent: 16000, expectedTraffic: 1300, flagReason: null },
-      { name: "Coffee Roastery", category: "cafe", audienceOverlap: 0.79, estimatedRent: 7500, expectedTraffic: 800, flagReason: null },
-      { name: "Luxury Fashion Boutique", category: "retail", audienceOverlap: 0.25, estimatedRent: 11000, expectedTraffic: 300, flagReason: "luxury pricing conflicts with the neighborhood's streetwear/punk culture" },
-      { name: "Corporate Bank Branch", category: "service", audienceOverlap: 0.2, estimatedRent: 15000, expectedTraffic: 400, flagReason: "institutional banking does not match the local independent-business culture" },
+      { name: "Taqueria Moderna", category: "restaurant", audienceOverlap: 0.94, estimatedRent: 9000, expectedTraffic: 1100, spaceNeeded: 2000, flagReason: null },
+      { name: "Craft Beer Hall", category: "restaurant", audienceOverlap: 0.87, estimatedRent: 12000, expectedTraffic: 900, spaceNeeded: 3000, flagReason: null },
+      { name: "Vintage Streetwear", category: "retail", audienceOverlap: 0.83, estimatedRent: 8000, expectedTraffic: 600, spaceNeeded: 2000, flagReason: null },
+      { name: "Live Music Venue", category: "entertainment", audienceOverlap: 0.8, estimatedRent: 16000, expectedTraffic: 1300, spaceNeeded: 5000, flagReason: null },
+      { name: "Coffee Roastery", category: "cafe", audienceOverlap: 0.79, estimatedRent: 7500, expectedTraffic: 800, spaceNeeded: 1500, flagReason: null },
+      { name: "Luxury Fashion Boutique", category: "retail", audienceOverlap: 0.25, estimatedRent: 11000, expectedTraffic: 300, spaceNeeded: 1800, flagReason: "luxury pricing conflicts with the neighborhood's streetwear/punk culture" },
+      { name: "Corporate Bank Branch", category: "service", audienceOverlap: 0.2, estimatedRent: 15000, expectedTraffic: 400, spaceNeeded: 2500, flagReason: "institutional banking does not match the local independent-business culture" },
     ],
   },
   {
     name: "West Loop, Chicago, IL",
     aliases: ["west loop", "chicago", "illinois"],
     dominantTastes: ["fine dining", "architecture", "jazz", "craft cocktails", "art galleries"],
-    incomeBand: "high",
-    footTraffic: "medium",
     tenants: [
-      { name: "Modern American Bistro", category: "restaurant", audienceOverlap: 0.9, estimatedRent: 14000, expectedTraffic: 700, flagReason: null },
-      { name: "Craft Cocktail Lounge", category: "restaurant", audienceOverlap: 0.86, estimatedRent: 12000, expectedTraffic: 600, flagReason: null },
-      { name: "Contemporary Art Gallery", category: "entertainment", audienceOverlap: 0.84, estimatedRent: 10000, expectedTraffic: 400, flagReason: null },
-      { name: "Specialty Wine Shop", category: "retail", audienceOverlap: 0.82, estimatedRent: 8500, expectedTraffic: 350, flagReason: null },
-      { name: "Upscale Home Goods", category: "retail", audienceOverlap: 0.75, estimatedRent: 13000, expectedTraffic: 450, flagReason: null },
-      { name: "Discount Mattress Warehouse", category: "retail", audienceOverlap: 0.2, estimatedRent: 12000, expectedTraffic: 500, flagReason: "warehouse retail conflicts with the neighborhood's curated, design-forward taste" },
-      { name: "Payday Loan Office", category: "service", audienceOverlap: 0.12, estimatedRent: 8000, expectedTraffic: 300, flagReason: "predatory lending does not fit the high-income, design-conscious demographic" },
+      { name: "Modern American Bistro", category: "restaurant", audienceOverlap: 0.9, estimatedRent: 14000, expectedTraffic: 700, spaceNeeded: 2500, flagReason: null },
+      { name: "Craft Cocktail Lounge", category: "restaurant", audienceOverlap: 0.86, estimatedRent: 12000, expectedTraffic: 600, spaceNeeded: 1800, flagReason: null },
+      { name: "Contemporary Art Gallery", category: "entertainment", audienceOverlap: 0.84, estimatedRent: 10000, expectedTraffic: 400, spaceNeeded: 3000, flagReason: null },
+      { name: "Specialty Wine Shop", category: "retail", audienceOverlap: 0.82, estimatedRent: 8500, expectedTraffic: 350, spaceNeeded: 1500, flagReason: null },
+      { name: "Upscale Home Goods", category: "retail", audienceOverlap: 0.75, estimatedRent: 13000, expectedTraffic: 450, spaceNeeded: 3000, flagReason: null },
+      { name: "Discount Mattress Warehouse", category: "retail", audienceOverlap: 0.2, estimatedRent: 12000, expectedTraffic: 500, spaceNeeded: 5000, flagReason: "warehouse retail conflicts with the neighborhood's curated, design-forward taste" },
+      { name: "Payday Loan Office", category: "service", audienceOverlap: 0.12, estimatedRent: 8000, expectedTraffic: 300, spaceNeeded: 1500, flagReason: "predatory lending does not fit the high-income, design-conscious demographic" },
     ],
   },
 ];
 
 const DEFAULT_NEIGHBORHOOD = NEIGHBORHOODS[0];
 
+/** Fuzzy match: score a location string against each neighborhood's aliases. */
 function findNeighborhood(location: string): NeighborhoodProfile {
   const loc = location.toLowerCase();
+  let best: NeighborhoodProfile | null = null;
+  let bestScore = 0;
   for (const n of NEIGHBORHOODS) {
-    if (n.aliases.some((a) => loc.includes(a))) return n;
+    for (const a of n.aliases) {
+      if (loc.includes(a)) {
+        const score = a.length; // longer alias match = more specific
+        if (score > bestScore) {
+          bestScore = score;
+          best = n;
+        }
+      }
+    }
   }
-  return DEFAULT_NEIGHBORHOOD;
+  return best ?? DEFAULT_NEIGHBORHOOD;
 }
 
-function scoreTenant(tenant: Omit<Tenant, "score" | "verdict">, building: Report["building"]): Tenant {
+function scoreTenant(tenant: Omit<Tenant, "score" | "verdict" | "why">, building: Report["building"], tastes: string[]): Tenant {
   const audienceOverlap = tenant.audienceOverlap;
   const categoryWeight = CATEGORY_WEIGHT[tenant.category] ?? 0.5;
   const budgetFit = tenant.estimatedRent <= building.maxRent ? 1 : 0.3;
   const trafficFit = tenant.expectedTraffic >= building.minTraffic ? 1 : 0.4;
+  const spaceFit = tenant.spaceNeeded <= building.sqft ? 1 : 0.5;
 
   const score = Math.round(
-    (audienceOverlap * 0.55 + categoryWeight * 0.2 + budgetFit * 0.15 + trafficFit * 0.1) * 100
+    (audienceOverlap * 0.5 + categoryWeight * 0.2 + budgetFit * 0.15 + trafficFit * 0.1 + spaceFit * 0.05) * 100
   );
 
   let verdict: string;
@@ -129,7 +149,14 @@ function scoreTenant(tenant: Omit<Tenant, "score" | "verdict">, building: Report
     verdict = "mismatch";
   }
 
-  return { ...tenant, score, verdict };
+  let why: string;
+  if (verdict === "mismatch") {
+    why = `low audience overlap (${Math.round(audienceOverlap * 100)}%) with the neighborhood's taste — ${tenant.flagReason ?? "no matching cultural signal"}`;
+  } else {
+    why = `overlap ${Math.round(audienceOverlap * 100)}% with local taste (driven by: ${tastes.slice(0, 3).join(", ")})`;
+  }
+
+  return { ...tenant, score, verdict, why };
 }
 
 export function analyzeDemo(location: string, maxRent: number, minTraffic: number, sqft: number): Report {
@@ -137,11 +164,22 @@ export function analyzeDemo(location: string, maxRent: number, minTraffic: numbe
   const building = { maxRent, minTraffic, sqft };
 
   const tenants = neighborhood.tenants
-    .map((t) => scoreTenant(t, building))
+    .map((t) => scoreTenant(t, building, neighborhood.dominantTastes))
     .sort((a, b) => b.score - a.score);
 
   const strong = tenants.filter((t) => t.verdict === "strong fit");
   const mismatch = tenants.filter((t) => t.verdict === "mismatch");
+
+  const categoryCount: Record<string, number> = {};
+  for (const t of tenants) categoryCount[t.category] = (categoryCount[t.category] ?? 0) + 1;
+  const total = tenants.length || 1;
+  const balance = Object.entries(categoryCount).map(([cat, count]) => ({
+    category: CATEGORY_LABEL[cat] ?? cat,
+    count,
+    pct: Math.round((count / total) * 100),
+  }));
+
+  const narrative = `For this ${sqft.toLocaleString()} sq ft space in ${neighborhood.name}, prioritize a ${strong.slice(0, 3).map((t) => t.name.toLowerCase()).join(" + ")} cluster — these tenants show the strongest audience overlap with the neighborhood's taste.`;
 
   return {
     location: neighborhood.name,
@@ -151,12 +189,11 @@ export function analyzeDemo(location: string, maxRent: number, minTraffic: numbe
       strongFits: strong.length,
       mismatches: mismatch.length,
       recommendedMix: strong.slice(0, 5).map((t) => t.name),
+      narrative,
+      balance,
     },
     tenants,
-    flags: mismatch.map((t) => ({
-      tenant: t.name,
-      reason: t.flagReason ?? "audience does not match local taste",
-    })),
+    flags: mismatch.map((t) => ({ tenant: t.name, reason: t.why })),
     mode: "demo",
   };
 }
