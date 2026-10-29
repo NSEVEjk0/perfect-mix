@@ -31,7 +31,8 @@ export interface Report {
   };
   tenants: Tenant[];
   flags: { tenant: string; reason: string }[];
-  mode: "demo";
+  trace?: { step: string; result?: string; count?: number; error?: string; tags?: string[] }[];
+  mode: "demo" | "live";
 }
 
 interface NeighborhoodProfile {
@@ -194,6 +195,13 @@ export function analyzeDemo(location: string, maxRent: number, minTraffic: numbe
     },
     tenants,
     flags: mismatch.map((t) => ({ tenant: t.name, reason: t.why })),
+    trace: [
+      { step: "resolve_location", result: neighborhood.name },
+      { step: "fetch_locality_taste", tags: neighborhood.dominantTastes },
+      { step: "generate_candidates", count: tenants.length },
+      { step: "score", count: tenants.length },
+      { step: "flag", count: mismatch.length },
+    ],
     mode: "demo",
   };
 }

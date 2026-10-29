@@ -49,18 +49,25 @@ async function resolveLocation(query) {
   return data.results?.[0] ?? data.items?.[0] ?? null;
 }
 
-/** Fetch locality taste via the Insights API. */
+/** Fetch locality taste via the Insights API (real request shape). */
 async function fetchLocalityTaste(locationQuery, resolved) {
-  const signal = {
-    location: {
-      query: locationQuery,
-      ...(resolved?.id ? { id: resolved.id } : {}),
-    },
-  };
   const body = {
-    filter: { type: "taste" },
-    signal,
-    limit: 30,
+    filter: {
+      type: "urn:entity:place",
+      location: {
+        query: [locationQuery],
+      },
+    },
+    signal: {
+      location: {
+        query: locationQuery,
+        ...(resolved?.id ? { id: resolved.id } : {}),
+      },
+    },
+    feature: {
+      explainability: true,
+    },
+    take: 20,
   };
   const data = await qloo("/v2/insights", {
     method: "POST",
@@ -69,20 +76,23 @@ async function fetchLocalityTaste(locationQuery, resolved) {
   return data;
 }
 
-/** Pull tags/entities from an insights response. */
+/** Pull tags/entities from an insights response (real response shape). */
 function extractTasteTags(insights) {
   const tags = [];
   const push = (items) => {
     for (const it of items ?? []) {
       if (it?.tag) tags.push({ tag: it.tag, score: it.score ?? 0.5 });
       else if (it?.entity) tags.push({ tag: it.entity, score: it.score ?? 0.5 });
+      else if (it?.id) tags.push({ tag: it.id, score: it.score ?? 0.5 });
+      else if (it?.name) tags.push({ tag: it.name, score: it.score ?? 0.5 });
       else if (typeof it === "string") tags.push({ tag: it, score: 0.5 });
     }
   };
+  push(insights?.results?.entities);
+  push(insights?.results?.tags);
   push(insights?.taste);
   push(insights?.interests);
   push(insights?.tags);
-  push(insights?.results);
   return tags.slice(0, 20);
 }
 

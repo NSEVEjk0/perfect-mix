@@ -29,6 +29,7 @@ export default function AnalyzePanel() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"demo" | "live">("demo");
+  const [showTrace, setShowTrace] = useState(false);
 
   const run = async () => {
     setLoading(true);
@@ -56,7 +57,11 @@ export default function AnalyzePanel() {
         signal: AbortSignal.timeout(30000),
       });
       const data = await res.json();
-      if (!data.ok) throw new Error(data.error ?? "analysis failed");
+      if (!data.ok) {
+        // surface the agent's error + partial trace
+        const trace = data.trace?.length ? `\nTrace: ${data.trace.map((t: { step?: string }) => t.step ?? "?").join(" → ")}` : "";
+        throw new Error(`${data.error ?? "analysis failed"}${trace}`);
+      }
       setReport(data);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
@@ -215,6 +220,7 @@ export default function AnalyzePanel() {
                   <th className="px-4 py-2.5 font-medium">audience overlap</th>
                   <th className="px-4 py-2.5 font-medium">est. rent</th>
                   <th className="px-4 py-2.5 font-medium">traffic</th>
+                  <th className="px-4 py-2.5 font-medium">space</th>
                   <th className="px-4 py-2.5 font-medium">score</th>
                   <th className="px-4 py-2.5 font-medium">verdict</th>
                   <th className="px-4 py-2.5 font-medium">why</th>
@@ -238,6 +244,9 @@ export default function AnalyzePanel() {
                     </td>
                     <td className="px-4 py-2.5 font-mono text-xs text-ink-soft">${t.estimatedRent.toLocaleString()}</td>
                     <td className="px-4 py-2.5 font-mono text-xs text-ink-soft">{t.expectedTraffic.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-ink-soft">
+                      {t.spaceNeeded ? `${t.spaceNeeded.toLocaleString()} sqft` : "—"}
+                    </td>
                     <td className="px-4 py-2.5">
                       <span className="font-mono text-base font-bold text-ink">{t.score}</span>
                     </td>
@@ -270,6 +279,35 @@ export default function AnalyzePanel() {
           <div className="mt-4 font-mono text-[10px] text-ink-faint">
             generated for {report.location} · {report.building.sqft.toLocaleString()} sq ft · max rent ${report.building.maxRent.toLocaleString()}/mo
           </div>
+
+          {/* trace — how this was calculated */}
+          {report.trace && report.trace.length > 0 && (
+            <div className="mt-6 border-t border-line pt-4">
+              <button
+                onClick={() => setShowTrace((v) => !v)}
+                className="flex items-center gap-2 font-mono text-[11px] text-ink-soft transition hover:text-accent-deep"
+              >
+                <span className={`transition-transform ${showTrace ? "rotate-90" : ""}`}>▸</span>
+                How this was calculated
+              </button>
+              {showTrace && (
+                <div className="mt-3 space-y-1.5 rounded-xl border border-line bg-paper-dim p-4">
+                  {report.trace.map((t, i) => (
+                    <div key={i} className="flex items-start gap-2 font-mono text-[11px] leading-5">
+                      <span className="text-accent-deep">{i + 1}.</span>
+                      <span className="text-ink-soft">{t.step}</span>
+                      {t.result && <span className="text-ink-faint">→ {t.result}</span>}
+                      {t.count !== undefined && <span className="text-ink-faint">({t.count})</span>}
+                      {t.tags && t.tags.length > 0 && (
+                        <span className="text-ink-faint">· {t.tags.join(", ")}</span>
+                      )}
+                      {t.error && <span className="text-bad">· {t.error}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
