@@ -1,114 +1,83 @@
-# Perfect Mix — prescriptive retail real estate
+# PerfectMix
 
-> A location in. A perfect mix out.
+Find the businesses that belong. PerfectMix turns a neighborhood and a vacant retail space into an evidence-backed leasing research scenario.
 
-Developers and landlords lose millions on the wrong tenant mix. **Perfect Mix** reads the cultural taste of a neighborhood and prescribes the tenants whose audiences actually match — with a scored, actionable report.
+Built for the Qloo Agentic Hackathon. MIT licensed.
 
-Built for the **Qloo Agentic Hackathon**. Powered by [Qloo's Taste API](https://www.qloo.com/) — locality intelligence plus cross-domain taste inference.
+## The product
 
-## What it does
+- Resolve a neighborhood or city through Qloo entity search.
+- Inspect nearby open places around its actual coordinates. Sparse coverage triggers a disclosed expansion from 2.5 km to 5 km.
+- Use nearby business audiences as cultural taste anchors, then infer tastes and compare seven tenant concept tags in the same Qloo query.
+- Research local reference operators for the selected concepts and an alternative.
+- Infer brands and music from the same local anchors, with Qloo explainability contributions when available.
+- Enumerate feasible concept combinations under floor-area, category-focus, and unit-count constraints.
+- Show an interactive allocation diagram, measured affinities, evidence, research activity, next validation steps, saved reports, and a downloadable brief.
+- Test an optional business idea through Qloo semantic tag search. The report shows exactly how the description was interpreted.
 
-Input a location and a building profile (max rent, minimum traffic, square footage). Perfect Mix:
+All cultural evidence comes from the live Qloo hackathon API. There is no hardcoded neighborhood demo, invented affinity, random rent estimate, or fabricated LLM comparison. The research workflow adapts to coverage and to the selected shortlist. It uses Qloo tools and a deterministic constraint planner; it does not currently use an LLM.
 
-1. **Builds a taste profile for the location** via Qloo — what this neighborhood actually likes, across categories.
-2. **Evaluates tenant candidates** per category (restaurant, café, retail, entertainment, health, service) against that profile.
-3. **Scores every tenant** on audience overlap, category fit, rent budget, and traffic expectations.
-4. **Flags mismatches** with a hard gate: any tenant with under 30% audience overlap is flagged regardless of rent or traffic — because if the people won't come, nothing else matters.
-5. **Outputs a report**: recommended mix, scored tenant table, and risk flags with reasons.
+## Run locally
 
-## Demo
-
-Live: **https://web-nine-zeta-8ayan5j041.vercel.app**
-
-The deployed demo runs **entirely in the browser** — no backend required. It ships with three curated neighborhoods (Williamsburg, The Mission, West Loop), each with distinct taste profiles and realistic tenant candidates.
-
-## How it works
-
-```
-location + building profile
-        │
-        ▼
-┌───────────────┐     ┌──────────────────┐
-│  Qloo Taste   │────▶│  cross-domain     │
-│  API (live)   │     │  recommendations  │
-└───────────────┘     └──────────────────┘
-        │                        │
-        ▼                        ▼
-┌──────────────────────────────────────┐
-│  scoring engine                       │
-│  · audience overlap (55%)             │
-│  · category fit (20%)                 │
-│  · rent budget (15%)                  │
-│  · traffic (10%)                      │
-│  · hard gate: overlap < 30% = mismatch │
-└──────────────────────────────────────┘
-        │
-        ▼
-┌──────────────────────────────────────┐
-│  report                               │
-│  · recommended mix                    │
-│  · scored tenant table                │
-│  · risk flags with reasons            │
-└──────────────────────────────────────┘
-```
-
-### Live mode (Qloo)
-
-Set `QLOO_KEY` in the agent's environment and the agent switches from demo to live mode:
+Node.js 22.18+ recommended.
 
 ```bash
-QLOO_KEY=your_key TM_PORT=4180 node agent/index.js
-```
-
-The agent uses the **Qloo hackathon API** (`https://hackathon.api.qloo.com`, header `X-Api-Key`):
-
-1. **Resolve location** — `GET /search?q=<location>&type=place`
-2. **Fetch locality taste** — `POST /v2/insights` with `filter.type: "taste"` and `signal.location.query`
-3. **Generate candidates** per category, grounded in the returned taste tags/entities
-4. **Score** every tenant with a traceable "why" (audience overlap, category fit, rent, traffic, space)
-5. **Flag** mismatches via the hard gate (overlap < 30%)
-
-The agent logs every step to a `trace` array returned in the report — so judges can see Qloo is load-bearing, not decorative.
-
-### How to run the live demo
-
-```bash
-# 1. Get a Qloo hackathon API key (register via the hackathon)
-# 2. Start the agent
-QLOO_KEY=your_key TM_PORT=4180 node agent/index.js
-# 3. Point the web app at it
 cd web
-NEXT_PUBLIC_AGENT_URL=http://your-server:4180 npm run build
+npm ci
+cp .env.example .env.local
+# Put your Qloo hackathon key in .env.local.
+npm run dev
 ```
 
-Without a key, the deployed site runs the identical scoring engine client-side with curated neighborhood data — fully standalone.
+Open http://localhost:3004. For a production build, run `npm run build` and `npm start`.
 
-### Demo mode (standalone)
+The key stays server-side. The API uses GET requests to https://hackathon.api.qloo.com with the X-Api-Key header. Never add the key to NEXT_PUBLIC variables or source control. On Vercel, configure QLOO_KEY in the project's server environment. The website and server API deploy together from the web directory.
 
-No key? No problem. The web app computes the same report client-side from curated neighborhood data. The scoring logic is identical to the live path.
+## Use as an agent tool
 
-## Repository layout
+GET /api/tool returns a tool description and JSON input schema. POST /api/analyze accepts the following JSON and returns a full research report. Agents can invoke this tool to ground a leasing decision in Qloo evidence rather than guess cultural fit.
 
+```json
+{
+  "location": "Williamsburg, Brooklyn, NY",
+  "sqft": 3000,
+  "monthlyRent": 15000,
+  "maxUnits": 2,
+  "focus": "balanced",
+  "proposed": "wine bar"
+}
 ```
-agent/index.js          Agent: Qloo integration + scoring engine (Node.js)
-web/app/                Next.js frontend
-web/components/         Analyze panel (inputs → report)
-web/lib/demoEngine.ts   Client-side demo engine (same scoring logic)
-```
 
-## Quick start
+With Accept: text/event-stream, the endpoint streams step, report, and error events. Otherwise it returns JSON. Responses from Qloo may be cached for up to 15 minutes. The public endpoint limits repeated analyses per client. No Qloo credentials appear in responses.
+
+## What the numbers mean
+
+Qloo affinity is a relative taste measure, not an audience percentage, projected revenue, or success probability. The concept comparison uses the same local audience anchors. Music and brand scores come from separate cross-domain queries and are not treated as comparable concept ranks.
+
+The prototype reserves 10% of gross area for shared space and uses fixed, documented concept area allowances. These are planning assumptions, not measurements of reference businesses. Monthly asking rent is allocated from the user's target, in proportion to usable area. It does not establish an operator's affordability.
+
+The nearby results are a ranked sample, not a complete inventory or competition count. Reference operators are existing businesses, not verified available tenants. Neighborhood audiences are inferred from nearby places, not a census of residents. Missing data remains missing, and insufficient local evidence produces a clear error rather than substituting another city.
+
+The planner maximizes the sum of rank-derived concept utilities, with a small category-variety bonus. It enforces minimum concept footprints, the shared-space reserve, the requested focus, and the maximum number of units. Unused floor area stays visible for layout refinement.
+
+## Validation
 
 ```bash
-# agent
-npm install   # (if adding deps)
-QLOO_KEY=your_key TM_PORT=4180 node agent/index.js
-
-# web
-cd web && npm install && npm run dev
+cd web
+npm test
+npm run check
+npm run build
 ```
 
-## Why Qloo matters
+Planner checks cover area and rent conservation, unit limits, focus, missing affinities, dependence on Qloo ranks, and invalid input. Live API and browser verification reports are recorded during development; they should not be confused with a security audit or commercial validation.
 
-Demographics tell you who lives there. Taste tells you what they'll buy. Two neighborhoods with identical demographics can have completely different cultural profiles — and a tenant mix that thrives in one can fail in the other. Qloo's cultural graph makes the recommendation specific to the *place*, not just the census data.
+## Source
 
-And the decision is transparent: every score has a reasoning trail. No black-box "the algorithm said so."
+- web/lib/qloo.ts — private Qloo client and evidence parsing
+- web/lib/engine.ts — adaptive research workflow
+- web/lib/planner.ts — validation and feasible mix selection
+- web/app/api/analyze/route.ts — streaming and JSON agent tool
+- web/components/PerfectMixApp.tsx — responsive research workspace
+- tests/planner.test.mjs — decision constraints
+
+Documentation: https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide
