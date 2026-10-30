@@ -4,6 +4,10 @@ Find the businesses that belong. PerfectMix turns a neighborhood and a vacant re
 
 Built for the Qloo Agentic Hackathon. MIT licensed.
 
+[Open the live app](https://web-nine-zeta-8ayan5j041.vercel.app) · [Agent tool schema](https://web-nine-zeta-8ayan5j041.vercel.app/api/tool)
+
+To try it, keep the Williamsburg example and select **Find my perfect mix**. Open **Local evidence** to inspect the businesses, brand and music signals, and **Research activity** to follow the Qloo calls. **Export brief** downloads the leasing scenario and its assumptions. No account is required.
+
 ## The product
 
 - Resolve a neighborhood or city through Qloo entity search.
@@ -49,6 +53,17 @@ GET /api/tool returns a tool description and JSON input schema. POST /api/analyz
 ```
 
 With Accept: text/event-stream, the endpoint streams step, report, and error events. Otherwise it returns JSON. Responses from Qloo may be cached for up to 15 minutes. The public endpoint limits repeated analyses per client. No Qloo credentials appear in responses.
+
+An agent can discover the schema and invoke the hosted tool directly:
+
+```bash
+curl https://web-nine-zeta-8ayan5j041.vercel.app/api/tool
+curl https://web-nine-zeta-8ayan5j041.vercel.app/api/analyze \
+  -H 'Content-Type: application/json' \
+  --data '{"location":"Williamsburg, Brooklyn, NY","sqft":3000,"monthlyRent":15000,"maxUnits":2,"focus":"balanced"}'
+```
+
+The JSON report includes the resolved locality, source entity and tag IDs, concept affinities, a feasible allocation, reference operators, cross-domain evidence, assumptions, and the research trace. Use these fields to explain a recommendation and identify the next facts to verify.
 
 ## What the numbers mean
 
