@@ -4,7 +4,7 @@ Find the businesses that belong. PerfectMix turns a neighborhood and a vacant re
 
 Built for the Qloo Agentic Hackathon. MIT licensed.
 
-[Open the live app](https://web-nine-zeta-8ayan5j041.vercel.app) · [Agent tool schema](https://web-nine-zeta-8ayan5j041.vercel.app/api/tool)
+[Open the live app](https://perfectmix.vercel.app) · [Agent tool schema](https://perfectmix.vercel.app/api/tool)
 
 To try it, keep the Williamsburg example and select **Find my perfect mix**. Open **Local evidence** to inspect the businesses, brand and music signals, and **Research activity** to follow the Qloo calls. **Export brief** downloads the leasing scenario and its assumptions. No account is required.
 
@@ -57,8 +57,8 @@ With Accept: text/event-stream, the endpoint streams step, report, and error eve
 An agent can discover the schema and invoke the hosted tool directly:
 
 ```bash
-curl https://web-nine-zeta-8ayan5j041.vercel.app/api/tool
-curl https://web-nine-zeta-8ayan5j041.vercel.app/api/analyze \
+curl https://perfectmix.vercel.app/api/tool
+curl https://perfectmix.vercel.app/api/analyze \
   -H 'Content-Type: application/json' \
   --data '{"location":"Williamsburg, Brooklyn, NY","sqft":3000,"monthlyRent":15000,"maxUnits":2,"focus":"balanced"}'
 ```
