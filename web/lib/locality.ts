@@ -28,6 +28,7 @@ function tokens(value: string) {
   return normalize(value)
     .split(" ")
     .flatMap((t) => (aliases[t] ?? t).split(" "))
+    .filter(Boolean)
     .filter((t) => !["the", "city", "district", "neighborhood"].includes(t));
 }
 
@@ -40,7 +41,9 @@ export function selectLocality<T extends LocalityCandidate>(
     .split(",")
     .map((p) => p.trim())
     .filter(Boolean);
+  if (!parts.length) return null;
   const primary = tokens(parts[0]);
+  if (!primary.length) return null;
   const context = tokens(parts.slice(1).join(" "));
   const scored = candidates
     .filter(

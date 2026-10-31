@@ -7,6 +7,28 @@ const loc = (name, disambiguation) => ({
   location: { lat: 1, lon: 1 },
 });
 
+test("a place without regional context resolves instead of requiring an empty search term", () => {
+  const brooklyn = loc("Brooklyn", "Brooklyn, New York, United States");
+  assert.equal(selectLocality("brooklyn", [brooklyn]), brooklyn);
+  assert.equal(selectLocality("Brooklyn, ", [brooklyn]), brooklyn);
+});
+test("a bare city name prefers an exact locality name over a neighborhood", () => {
+  const city = loc("Brooklyn", "Brooklyn, New York, United States");
+  assert.equal(
+    selectLocality("Brooklyn", [
+      { ...loc("Downtown Brooklyn", "Brooklyn, New York, United States"), popularity: 1 },
+      { ...city, popularity: 0.9 },
+    ])?.name,
+    "Brooklyn",
+  );
+});
+test("empty or generic location text cannot select an arbitrary locality", () => {
+  const candidates = [loc("Brooklyn", "Brooklyn, New York, United States")];
+  for (const query of ["", ", ,", "the city", "district"]) {
+    assert.equal(selectLocality(query, candidates), null);
+  }
+});
+
 test("Mission District resolves to San Francisco even when Qloo ranks a Philippine locality first", () => {
   const candidates = [
     loc("San Francisco del Monte", "Quezon City, Philippines"),
