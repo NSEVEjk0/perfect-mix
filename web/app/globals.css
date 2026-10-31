@@ -12,6 +12,20 @@
   --sans: var(--font-sans), Arial, sans-serif;
   --serif: var(--font-serif), Georgia, serif;
 }
+.coverage-card {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  margin-bottom: 20px;
+}
+.coverage-card > p { margin-top: 10px; color: var(--muted); line-height: 1.7; }
+.coverage-location-only, .coverage-partial { border-color: #ccd8b7; background: #f5f8ec; }
+.location-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin: 20px 0; }
+.location-facts dt { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.location-facts dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.coverage-links { display: flex; flex-wrap: wrap; gap: 12px 24px; font-size: 11px; line-height: 1.7; color: var(--muted); }
+.coverage-links > a, .coverage-links span a { color: var(--green); text-decoration: underline; text-underline-offset: 3px; }
 * {
   box-sizing: border-box;
 }

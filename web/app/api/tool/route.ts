@@ -16,7 +16,7 @@ export async function GET() {
         properties: {
           location: {
             type: "string",
-            description: "Neighborhood and city, or a city name.",
+            description: "Neighborhood and city, city and country, postal code, or latitude, longitude. Unresolved smaller places may return explicitly labeled broader regional context.",
             minLength: 3,
             maxLength: 160,
           },
@@ -43,7 +43,7 @@ export async function GET() {
       },
       provider: "Qloo Taste AI",
       workflow:
-        "Resolve locality → inspect nearby places → infer audience tastes → compare concept tags → research selected operators → connect brands/music → constrain the space scenario.",
+        "Resolve the location with Qloo or worldwide GeoNames lookup → inspect nearby places, expanding a disclosed radius when sparse → infer audience tastes when available → compare concept tags → constrain the space scenario. If cultural evidence is insufficient, return geographic facts, available places, and unranked planning formats without inventing affinities.",
     },
     { headers: { "Cache-Control": "public, max-age=3600" } },
   );

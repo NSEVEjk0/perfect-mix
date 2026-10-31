@@ -27,11 +27,6 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (!process.env.QLOO_KEY)
-    return Response.json(
-      { error: "Live Qloo is not configured on the server." },
-      { status: 503 },
-    );
   if (!request.headers.get("accept")?.includes("text/event-stream")) {
     try {
       return Response.json(await analyze(input, () => {}));

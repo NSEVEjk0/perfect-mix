@@ -9,6 +9,7 @@ import type {
   TraceStep,
 } from "@/lib/types";
 import StreetScene from "./StreetScene";
+import LocationSummary from "./LocationSummary";
 
 const money = (n: number) =>
   new Intl.NumberFormat("en-US", {
@@ -225,14 +226,15 @@ function MethodDialog({ close }: { close: () => void }) {
       </h2>
       <p>
         PerfectMix is a Qloo-powered leasing research tool. It resolves a
-        locality, finds nearby places, and uses their audiences as taste
+        location, finds nearby places, and uses their audiences as taste
         anchors. It then compares tenant categories, looks across cultural
         domains, and chooses a feasible space scenario.
       </p>
       <div className="method-steps">
         <p>
           <b>01 / Research</b> Real Qloo entity IDs and validated tags. Sparse
-          coverage triggers a larger, disclosed search radius.
+          coverage triggers a larger, disclosed search radius. GeoNames provides
+          a worldwide place lookup when Qloo cannot locate the requested place.
         </p>
         <p>
           <b>02 / Compare</b> Qloo&apos;s measured affinities rank the concepts
@@ -264,7 +266,7 @@ function MethodDialog({ close }: { close: () => void }) {
 }
 
 function exportReport(report: AnalysisReport) {
-  const text = `# PerfectMix — ${report.locality.name}\n\nResearched ${report.generatedAt}\nQloo locality: ${report.locality.address}\n\n${report.narrative}\n\n## Leasing scenario\n\n${report.mix.units.map((u) => `- ${u.name}: ${number(u.sqft)} sq ft / ${money(u.monthlyRent)} monthly allocated asking rent`).join("\n")}\n\n${number(report.mix.sharedSqft)} sq ft shared space; ${number(report.mix.remainingSqft)} sq ft unallocated.\n\n## Measured concept affinities\n\n${report.concepts.map((c) => `- ${c.name}: ${affinity(c.affinity)}; Qloo tag ${c.tag?.id ?? "unresolved"}`).join("\n")}\n\n## Local taste anchors\n\n${report.seedPlaces.map((p) => `- ${p.name} / ${p.id}`).join("\n")}\n\n## Next steps\n\n${report.nextSteps.map((s) => `- ${s}`).join("\n")}\n\n## Evidence limits and assumptions\n\n${report.limitations.map((s) => `- ${s}`).join("\n")}\n\nPowered by Qloo Taste AI. This is a research scenario, not a demand forecast.\n`;
+  const text = `# PerfectMix — ${report.locality.name}\n\nResearched ${report.generatedAt}\nResolved location: ${report.locality.address}\nLocation source: ${report.locality.source ?? "Qloo"}\n${report.coverage ? `Coverage: ${report.coverage.label}\n${report.coverage.detail}\n` : ""}\n${report.narrative}\n\n## Leasing scenario\n\n${report.mix.units.map((u) => `- ${u.name}: ${number(u.sqft)} sq ft / ${money(u.monthlyRent)} monthly allocated asking rent`).join("\n")}\n\n${number(report.mix.sharedSqft)} sq ft shared space; ${number(report.mix.remainingSqft)} sq ft unallocated.\n\n## Measured concept affinities\n\n${report.concepts.map((c) => `- ${c.name}: ${affinity(c.affinity)}; Qloo tag ${c.tag?.id ?? "unresolved"}`).join("\n")}\n\n## Local taste anchors\n\n${report.seedPlaces.map((p) => `- ${p.name} / ${p.id}`).join("\n")}\n\n## Next steps\n\n${report.nextSteps.map((s) => `- ${s}`).join("\n")}\n\n## Evidence limits and assumptions\n\n${report.limitations.map((s) => `- ${s}`).join("\n")}\n\nPowered by Qloo Taste AI. This is a research scenario, not a demand forecast.\n`;
   const url = URL.createObjectURL(new Blob([text], { type: "text/markdown" }));
   const link = document.createElement("a");
   link.href = url;
@@ -412,8 +414,10 @@ function PlanResults({ report }: { report: AnalysisReport }) {
     report.mix.units[0]?.conceptId ?? report.concepts[0]?.id,
   );
   const concept = report.concepts.find((c) => c.id === selected);
+  const measured = report.concepts.some((c) => c.affinity !== null);
   return (
     <>
+      <LocationSummary report={report} />
       <div className="recommendation-banner">
         <div>
           <span className="eyebrow">
@@ -422,14 +426,14 @@ function PlanResults({ report }: { report: AnalysisReport }) {
           <h2>
             {report.mix.units.length
               ? report.mix.units.map((u) => u.name).join(" + ")
-              : "A smaller format needs a closer look."}
+              : measured ? "A smaller format needs a closer look." : "Your location. A useful starting point."}
           </h2>
           <p>{report.narrative}</p>
         </div>
         <div className="recommendation-stats">
           <div>
             <b>{report.mix.units.length}</b>
-            <span>complementary concepts</span>
+            <span>selected concepts</span>
           </div>
           <div>
             <b>{number(report.mix.usedSqft)}</b>
@@ -472,8 +476,8 @@ function PlanResults({ report }: { report: AnalysisReport }) {
           <div className="ranking-card">
             <div className="section-card-heading">
               <div>
-                <span className="eyebrow">THE OPTIONS, COMPARED</span>
-                <h3>A considered shortlist.</h3>
+                <span className="eyebrow">{measured ? "THE OPTIONS, COMPARED" : "PLANNING OPTIONS"}</span>
+                <h3>{measured ? "A considered shortlist." : "Formats to investigate."}</h3>
               </div>
               <span className="small-muted">
                 {report.concepts.filter((c) => c.affinity !== null).length}{" "}
@@ -507,8 +511,7 @@ function PlanResults({ report }: { report: AnalysisReport }) {
               </button>
             ))}
             <p className="fine-print">
-              Affinities compare these concept tags for the same nearby taste
-              anchors. A value of 0.9 does not mean 90% of residents will visit.
+              {measured ? "Affinities compare these concept tags for the same nearby taste anchors. A value of 0.9 does not mean 90% of residents will visit." : "These are standard business formats and their assumed footprints. No local affinity or tenant ranking is available; use them to plan your next research steps."}
             </p>
           </div>
         </div>
@@ -557,7 +560,7 @@ function LocalEvidence({ report }: { report: AnalysisReport }) {
               <strong>{report.locality.name}</strong>
               <span>
                 {report.radius / 1000} km business research radius · centered on
-                Qloo&apos;s resolved locality
+                the resolved location
               </span>
             </div>
             <a
@@ -585,9 +588,7 @@ function LocalEvidence({ report }: { report: AnalysisReport }) {
             ))}
           </div>
           <p className="fine-print">
-            Qloo taste tags for the audiences of{" "}
-            {report.seedPlaces.map((p) => p.name).join(", ")}. These are
-            inferred signals, not self-reported preferences.
+            {report.tastes.length ? `Qloo taste tags for the audiences of ${report.seedPlaces.map((p) => p.name).join(", ")}. These are inferred signals, not self-reported preferences.` : "No measured taste fingerprint is available. The location, available places, and planning brief remain useful starting points for local research."}
           </p>
         </div>
       </div>
@@ -713,7 +714,7 @@ function Activity({
         </span>
       </div>
       <p className="activity-explainer">
-        Qloo tools resolve the location and cultural evidence. The workflow
+        Qloo and worldwide place lookup tools resolve the location. Qloo supplies the cultural evidence. The workflow
         adapts its catchment to coverage and researches the shortlist selected
         by the constraint planner.
       </p>
@@ -1066,7 +1067,7 @@ export default function PerfectMixApp() {
             <form ref={formRef} onSubmit={run} className="analysis-form">
               <div className="form-main">
                 <label className="location-field">
-                  <span>Neighborhood or city</span>
+                  <span>Neighborhood, city or coordinates</span>
                   <div className="input-with-icon">
                     <Icon name="pin" size={18} />
                     <input
@@ -1077,7 +1078,7 @@ export default function PerfectMixApp() {
                       onChange={(e) =>
                         setInput({ ...input, location: e.target.value })
                       }
-                      placeholder="e.g. Williamsburg, Brooklyn"
+                      placeholder="e.g. Lagos, Nigeria or 6.5244, 3.3792"
                       disabled={loading}
                     />
                   </div>
@@ -1210,7 +1211,7 @@ export default function PerfectMixApp() {
               </div>
               <p className="form-assumption">
                 Rent is your planning target. Area allowances are prototype
-                assumptions. Cultural evidence comes from live Qloo research.
+                assumptions. Cultural evidence comes from Qloo. Place-name fallback uses GeoNames via Open-Meteo; the submitted location text is sent for lookup.
               </p>
             </form>
           </section>

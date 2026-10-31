@@ -10,14 +10,16 @@ To try it, keep the Williamsburg example and select **Find my perfect mix**. Ope
 
 ## The product
 
-- Resolve a neighborhood or city through Qloo entity search.
-- Inspect nearby open places around its actual coordinates. Sparse coverage triggers a disclosed expansion from 2.5 km to 5 km.
+- Resolve a neighborhood or city through Qloo entity search, with a worldwide GeoNames lookup through Open-Meteo when Qloo cannot resolve it. City names, postal codes, and latitude/longitude coordinates are supported.
+- If a smaller place is absent but its city can be found, return explicitly labeled broader regional context.
+- Inspect nearby open places around the resolved coordinates. Sparse coverage triggers disclosed expansion through 2.5, 5, 10, and 25 km radii.
 - Use nearby business audiences as cultural taste anchors, then infer tastes and compare seven tenant concept tags in the same Qloo query.
 - Research local reference operators for the selected concepts and an alternative.
 - Infer brands and music from the same local anchors, with Qloo explainability contributions when available.
 - Enumerate feasible concept combinations under floor-area, category-focus, and unit-count constraints.
 - Show an interactive allocation diagram, measured affinities, evidence, research activity, next validation steps, saved reports, and a downloadable brief.
 - Test an optional business idea through Qloo semantic tag search. The report shows exactly how the description was interpreted.
+- When cultural evidence is insufficient, return a map link, verified geographic facts where available, available Qloo places, and unranked business-format footprints. Missing affinities remain null and no tenant recommendation is generated.
 
 All cultural evidence comes from the live Qloo hackathon API. There is no hardcoded neighborhood demo, invented affinity, random rent estimate, or fabricated LLM comparison. The research workflow adapts to coverage and to the selected shortlist. It uses Qloo tools and a deterministic constraint planner; it does not currently use an LLM.
 
@@ -36,6 +38,8 @@ npm run dev
 Open http://localhost:3004. For a production build, run `npm run build` and `npm start`.
 
 The key stays server-side. The API uses GET requests to https://hackathon.api.qloo.com with the X-Api-Key header. Never add the key to NEXT_PUBLIC variables or source control. On Vercel, configure QLOO_KEY in the project's server environment. The website and server API deploy together from the web directory.
+
+Location fallback sends the submitted location text to Open-Meteo's geocoding API. Location facts are based on [GeoNames](https://www.geonames.org/) and displayed with attribution. Geocoding responses are cached for up to 24 hours. Coordinates bypass name lookup. The hackathon demo uses Open-Meteo's [free non-commercial API](https://open-meteo.com/en/terms); a commercial deployment can configure GEOCODING_API_KEY to use its commercial geocoding endpoint. [Geocoding API documentation](https://open-meteo.com/en/docs/geocoding-api).
 
 ## Use as an agent tool
 
@@ -71,7 +75,7 @@ Qloo affinity is a relative taste measure, not an audience percentage, projected
 
 The prototype reserves 10% of gross area for shared space and uses fixed, documented concept area allowances. These are planning assumptions, not measurements of reference businesses. Monthly asking rent is allocated from the user's target, in proportion to usable area. It does not establish an operator's affordability.
 
-The nearby results are a ranked sample, not a complete inventory or competition count. Reference operators are existing businesses, not verified available tenants. Neighborhood audiences are inferred from nearby places, not a census of residents. Missing data remains missing, and insufficient local evidence produces a clear error rather than substituting another city.
+The nearby results are a ranked sample, not a complete inventory or competition count. Reference operators are existing businesses, not verified available tenants. Neighborhood audiences are inferred from nearby places, not a census of residents. Missing data remains missing. Broader city context and expanded radii are disclosed; completely unidentifiable inputs still produce an error. Geographic resolution does not guarantee Qloo coverage at every point on earth.
 
 The planner maximizes the sum of rank-derived concept utilities, with a small category-variety bonus. It enforces minimum concept footprints, the shared-space reserve, the requested focus, and the maximum number of units. Unused floor area stays visible for layout refinement.
 

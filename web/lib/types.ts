@@ -54,16 +54,27 @@ export interface TraceStep {
   count?: number;
   durationMs?: number;
 }
+export interface ResolvedLocation {
+  id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lon: number;
+  source?: "Qloo" | "GeoNames" | "Coordinates";
+  scope?: "requested" | "broader";
+  population?: number;
+  timezone?: string;
+  country?: string;
+}
 export interface AnalysisReport {
   id: string;
   generatedAt: string;
   input: AnalysisInput;
-  locality: {
-    id: string;
-    name: string;
-    address: string;
-    lat: number;
-    lon: number;
+  locality: ResolvedLocation;
+  coverage?: {
+    status: "measured" | "partial" | "location-only";
+    label: string;
+    detail: string;
   };
   radius: number;
   tastes: Taste[];

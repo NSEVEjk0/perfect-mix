@@ -12,6 +12,10 @@ test("a place without regional context resolves instead of requiring an empty se
   assert.equal(selectLocality("brooklyn", [brooklyn]), brooklyn);
   assert.equal(selectLocality("Brooklyn, ", [brooklyn]), brooklyn);
 });
+test("localities written in non-Latin scripts retain their place name", () => {
+  const place = loc("東京", "東京, 日本");
+  assert.equal(selectLocality("東京, 日本", [place]), place);
+});
 test("a bare city name prefers an exact locality name over a neighborhood", () => {
   const city = loc("Brooklyn", "Brooklyn, New York, United States");
   assert.equal(
